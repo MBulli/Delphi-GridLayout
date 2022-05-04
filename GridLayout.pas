@@ -3,6 +3,7 @@
 INTERFACE
 
 USES
+  WinApi.Windows,
   WinApi.Messages,
   System.Classes,
   System.Generics.Collections,
@@ -20,6 +21,7 @@ USES
  TODO:
  - RemoveCol/Row/Item methods
  - How to handle implicit row and column? Maybe add in Layout and Remove after? Or TCollection.Update
+ - Prevent deletion of implicit row and column in Designer and Code
  - TComponent Editor
  - TextOut Values in Paint for Columns
  - Col/Row Span
@@ -32,11 +34,10 @@ TYPE
 
 
   TGridLayoutDefinitionBase = CLASS(TCollectionItem)
-  PRIVATE
+  PROTECTED
     FMode   : TGridLayoutSizeMode;
     FFactor : Single;
 
-  PROTECTED
     FUNCTION GetDisplayName: string; OVERRIDE;
 
     PROCEDURE SetFactor(NewValue : Single);
@@ -79,6 +80,11 @@ TYPE
 
 
   TGridLayoutItem = CLASS(TCollectionItem)
+  STRICT PRIVATE
+    FOrigCtrlWndProc : TWndMethod;
+
+    PROCEDURE DesignControlWndProcHook(VAR Message: TMessage);
+
   PRIVATE
     FControl : TControl;
     FColumn  : Integer;
@@ -134,8 +140,8 @@ TYPE
     FImplicitColumnDef : TGridLayoutColumnDefinition;
 
     // Calculated layout values
-    FColumns : ARRAY OF TGridLayoutColumnTuple;
-    FRows    : ARRAY OF TGridLayoutRowTuple;
+    FColumns : TArray<TGridLayoutColumnTuple>;
+    FRows    : TArray<TGridLayoutRowTuple>;
 
     FUNCTION ColumnWidthAtIndex (ColumnIndex : Integer) : Single;
     FUNCTION RowHeightAtIndex   (RowIndex    : Integer) : Single;
@@ -176,8 +182,12 @@ TYPE
 //    PROCEDURE AddColumnDefinition    (ColumnDefinition : TGridLayoutColumnDefinition);
 //    PROCEDURE RemoveColumnDefinition (ColumnDefinition : TGridLayoutColumnDefinition);
 
+    FUNCTION ColumnIndexFromPos(CONST Position : TPoint) : INTEGER;
+    FUNCTION RowIndexFromPos   (CONST Position : TPoint) : INTEGER;
+
     PROPERTY  ColumnCount : Integer READ GetColumnCount;
     PROPERTY  RowCount    : Integer READ GetRowCount;
+
   PUBLISHED
     PROPERTY Align;
     PROPERTY Color;
@@ -282,6 +292,7 @@ END;
 
 { TGridLayoutItem }
 
+
 CONSTRUCTOR TGridLayoutItem.Create(Collection: TCollection);
 BEGIN
   INHERITED Create(Collection);
@@ -289,6 +300,32 @@ BEGIN
   FControl := nil;
   FRow     := 0;
   FColumn  := 0;
+END;
+
+
+PROCEDURE TGridLayoutItem.DesignControlWndProcHook(var Message: TMessage);
+BEGIN
+  Assert(Assigned(FOrigCtrlWndProc));
+
+  IF (csDesigning IN FControl.ComponentState) THEN BEGIN
+    IF Message.Msg = WM_WINDOWPOSCHANGED THEN BEGIN
+      IF TRUE {((GetAsyncKeyState(VK_CONTROL) AND $8000)<>0)} THEN BEGIN
+
+        VAR OwningLayout := FControl.Parent AS TGridLayout;
+        VAR Position := OwningLayout.ScreenToClient(Mouse.CursorPos);
+
+        VAR Col := OwningLayout.ColumnIndexFromPos(Position);
+        VAR Row := OwningLayout.RowIndexFromPos(Position);
+
+        IF (Col <> -1) AND (Row <> -1) THEN BEGIN
+          SetColumn(Col);
+          SetRow(Row);
+        END;
+      END;
+    END;
+  END;
+
+  FOrigCtrlWndProc(Message);
 END;
 
 
@@ -300,6 +337,7 @@ BEGIN
   END;
 END;
 
+
 PROCEDURE TGridLayoutItem.SetRow(NewValue: Integer);
 BEGIN
   IF NewValue <> FRow THEN BEGIN
@@ -308,15 +346,72 @@ BEGIN
   END;
 END;
 
+
 PROCEDURE TGridLayoutItem.SetControl(NewValue: TControl);
+
+  FUNCTION _SameMethodPtr(CONST A, B : TMethod) : BOOLEAN; INLINE;
+  BEGIN
+    Result := (A.Code = B.Code) AND (A.Data = B.Data);
+  END;
+
+  FUNCTION _ShouldHookWndProc: BOOLEAN;
+  BEGIN
+    IF NOT Assigned(FControl) THEN EXIT(FALSE);
+    IF Assigned(FOrigCtrlWndProc) AND (TMethod(FControl.WindowProc).Code = @TGridLayoutItem.DesignControlWndProcHook) THEN EXIT(FALSE);
+    IF Assigned(FOrigCtrlWndProc) AND _SameMethodPtr(TMethod(FControl.WindowProc), TMethod(FOrigCtrlWndProc)) THEN EXIT(FALSE);
+    IF (csDestroying IN FControl.ComponentState) THEN EXIT(FALSE);
+
+    Result := (csDesigning IN FControl.ComponentState);
+  END;
+
+  FUNCTION _ControlAlreadyAssigned : BOOLEAN;
+  BEGIN
+    IF NewValue = NIL THEN EXIT(FALSE);
+
+    Result := FALSE;
+
+    VAR Collection := (GetOwner AS TOwnedCollection);
+
+    FOR VAR I := 0 TO Collection.Count-1  DO BEGIN
+      VAR Item := Collection.Items[I] AS TGridLayoutItem;
+
+      IF (Item <> self) AND (Item.FControl = NewValue) THEN BEGIN
+        EXIT(TRUE);
+      END;
+    END;
+  END;
+
 BEGIN
+  IF _ControlAlreadyAssigned THEN BEGIN
+    EXIT;
+  END;
+
   IF NewValue <> FControl THEN BEGIN
+    // Reset old control state
+    IF FControl <> NIL THEN BEGIN
+      IF Assigned(FOrigCtrlWndProc) THEN BEGIN
+        FControl.WindowProc := FOrigCtrlWndProc;
+        FOrigCtrlWndProc := NIL;
+      END;
+    END;
+
+    // Set new control
     FControl := NewValue;
+    FOrigCtrlWndProc := NIL;
 
-    VAR OwningLayout := ((GetOwner AS TOwnedCollection).Owner AS TGridLayout);
+    IF Assigned(FControl) THEN BEGIN
+      VAR OwningLayout := ((GetOwner AS TOwnedCollection).Owner AS TGridLayout);
 
-    IF Assigned(FControl) AND (FControl.Parent <> OwningLayout) THEN BEGIN
-      FControl.Parent := OwningLayout;
+      // Set Parent if necessary
+      IF (FControl.Parent <> OwningLayout) THEN BEGIN
+        FControl.Parent := OwningLayout;
+      END;
+
+      // Hook window for drag and drop form designer hack
+      IF _ShouldHookWndProc THEN BEGIN
+        FOrigCtrlWndProc := FControl.WindowProc;
+        FControl.WindowProc := DesignControlWndProcHook;
+      END;
     END;
 
     Changed(false);
@@ -411,6 +506,7 @@ BEGIN
 
   FOR VAR I := 0 TO FItems.Count-1 DO BEGIN
     IF TGridLayoutItem(FItems.Items[I]).Control = Control THEN BEGIN
+      TGridLayoutItem(FItems.Items[I]).Control := NIL;
       FItems.Delete(I);
       EXIT;
     END;
@@ -501,17 +597,29 @@ BEGIN
   // This is called if a control's parent is set to the gridlayout or if the parent was the gridlayout.
 
   IF NOT (csLoading IN ComponentState) AND (csDesigning IN ComponentState) THEN BEGIN
-    ShowMessageFmt('CMControlChange: Control: %s; Parent: %s Inserting: %d at Pos (%d, %d)', [ Message.Control.Name, Message.Control.Parent.Name, IfThen(Message.Inserting, 1, 0), Message.Control.Top, Message.Control.Left]);
+    //ShowMessageFmt('CMControlChange: Control: %s; Parent: %s Inserting: %d at Pos (%d, %d)', [ Message.Control.Name, Message.Control.Parent.Name, IfThen(Message.Inserting, 1, 0), Message.Control.Top, Message.Control.Left]);
 
     DisableAlign;
     TRY
       IF Message.Inserting AND (Message.Control.Parent = Self) THEN BEGIN
         //Message.Control.Anchors := [];
-        //FControlCollection.AddControl(Message.Control);
-        AddItem(Message.Control, 0, 1);
+
+        VAR ControlAlreadyAssigned := FALSE;
+
+        FOR VAR I := 0 TO FItems.Count-1 DO BEGIN
+          VAR Item := FItems.Items[I] AS TGridLayoutItem;
+
+          IF Item.Control = Message.Control THEN BEGIN
+            ControlAlreadyAssigned := TRUE;
+            BREAK;
+          END;
+        END;
+
+        IF NOT ControlAlreadyAssigned THEN BEGIN
+          AddItem(Message.Control, 0, 1);
+        END;
       END
       ELSE BEGIN
-        //FControlCollection.RemoveControl(Message.Control);
         RemoveItemForControl(Message.Control);
       END;
     FINALLY
@@ -673,6 +781,37 @@ BEGIN
     AdjustSize;
   END;
 END;
+
+
+FUNCTION TGridLayout.ColumnIndexFromPos(CONST Position: TPoint): INTEGER;
+BEGIN
+  IF NOT ClientRect.Contains(Position) THEN EXIT(-1);
+
+  Result := -1;
+
+  FOR VAR I := 0 TO Length(FColumns)-1 DO BEGIN
+    VAR Col := FColumns[I];
+    IF InRange(Position.X, Col.MinX, Col.MinX + Col.Width) THEN BEGIN
+      EXIT(I);
+    END;
+  END;
+END;
+
+
+FUNCTION TGridLayout.RowIndexFromPos(CONST Position: TPoint): INTEGER;
+BEGIN
+  IF NOT ClientRect.Contains(Position) THEN EXIT(-1);
+
+  Result := -1;
+
+  FOR VAR I := 0 TO Length(FRows)-1 DO BEGIN
+    VAR Row := FRows[I];
+    IF InRange(Position.Y, Row.MinY, Row.MinY + Row.Height) THEN BEGIN
+      EXIT(I);
+    END;
+  END;
+END;
+
 
 
 FUNCTION TGridLayout.ColumnWidthAtIndex(ColumnIndex: Integer): Single;

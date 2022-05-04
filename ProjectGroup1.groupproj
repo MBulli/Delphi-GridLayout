@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{676DC785-D5C9-4C00-99F1-424075459102}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="Package2.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="GridLayoutTest.dproj">
+            <Dependencies>Package2.dproj</Dependencies>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="Package2">
+        <MSBuild Projects="Package2.dproj"/>
+    </Target>
+    <Target Name="Package2:Clean">
+        <MSBuild Projects="Package2.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Package2:Make">
+        <MSBuild Projects="Package2.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="GridLayoutTest" DependsOnTargets="Package2">
+        <MSBuild Projects="GridLayoutTest.dproj"/>
+    </Target>
+    <Target Name="GridLayoutTest:Clean" DependsOnTargets="Package2:Clean">
+        <MSBuild Projects="GridLayoutTest.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="GridLayoutTest:Make" DependsOnTargets="Package2:Make">
+        <MSBuild Projects="GridLayoutTest.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="Package2;GridLayoutTest"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="Package2:Clean;GridLayoutTest:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="Package2:Make;GridLayoutTest:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

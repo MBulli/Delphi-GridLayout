@@ -1,0 +1,507 @@
+﻿UNIT GridLayout;
+
+INTERFACE
+
+USES
+  System.Classes,
+  System.Generics.Collections,
+  System.Math,
+  System.SysUtils,
+  System.Types,
+  Vcl.Controls,
+  Vcl.ExtCtrls,
+  Vcl.Graphics,
+  Vcl.WinXPanels;
+
+TYPE
+  TGridLayoutSizeMode = (gsmPixels, gsmStar, gsmAutosize);
+
+  TGridLayoutLength = RECORD
+    SizeMode : TGridLayoutSizeMode;
+    Factor   : Single;
+
+    CONSTRUCTOR Create(factor : Single; sizeMode : TGridLayoutSizeMode);
+  END;
+
+  TGridLayoutDefinitionBase = CLASS
+    FValue : TGridLayoutLength;
+
+    CONSTRUCTOR CreateAutoSize();
+    CONSTRUCTOR Create (SizeMode : TGridLayoutSizeMode;
+                        Factor   : Single);
+
+    FUNCTION GetFactor() : Single;
+  END;
+
+  TGridLayoutColumnDefinition = CLASS (TGridLayoutDefinitionBase)
+    PROPERTY Width : Single READ GetFactor;
+  END;
+
+  TGridLayoutRowDefinition = CLASS (TGridLayoutDefinitionBase)
+    PROPERTY Height : Single READ GetFactor;
+  END;
+
+  TGridLayoutItem = CLASS
+    FControl : TWinControl;
+    FColumn  : Integer;
+    FRow     : Integer;
+
+//    FColumnSpan : Integer;
+//    FRowSpan    : Integer;
+
+    CONSTRUCTOR Create( Control : TWinControl;
+                        Row     : Integer;
+                        Column  : Integer );
+  END;
+
+  TGridLayout = CLASS(TCustomPanel)
+  PRIVATE
+    TYPE TGridLayoutColumnTuple = RECORD
+      MinX       : Single;
+      Width      : Single;
+      Definition : TGridLayoutColumnDefinition
+    END;
+
+    TYPE TGridLayoutRowTuple = RECORD
+      MinY       : Single;
+      Height     : Single;
+      Definition : TGridLayoutRowDefinition
+    END;
+
+  PRIVATE
+    FShowHelpLines : Boolean; // debug only
+
+    FItems     : TObjectList<TGridLayoutItem>;
+    FRowDef    : TObjectList<TGridLayoutRowDefinition>;
+    FColumnDef : TObjectList<TGridLayoutColumnDefinition>;
+
+    // We need at least one definition
+    // The last definition is always a filler with 1*
+    FImplicitRowDef    : TGridLayoutRowDefinition;
+    FImplicitColumnDef : TGridLayoutColumnDefinition;
+
+    // Calculated layout values
+    FColumns : ARRAY OF TGridLayoutColumnTuple;
+    FRows    : ARRAY OF TGridLayoutRowTuple;
+
+    FUNCTION ColumnWidthAtIndex (ColumnIndex : Integer) : Single;
+    FUNCTION RowHeightAtIndex   (RowIndex    : Integer) : Single;
+
+    FUNCTION GetColumnCount () : Integer;
+    FUNCTION GetRowCount    () : Integer;
+
+  PROTECTED
+    PROCEDURE AlignControls  (    AControl : TControl;
+                              VAR Rect     : TRect);                            OVERRIDE;
+    PROCEDURE Paint;                                                            OVERRIDE;
+
+
+
+// TODO?    PROCEDURE CMControlChange(VAR Msg      : TCMControlChange);                 MESSAGE CM_CONTROLCHANGE;
+
+  PUBLIC
+    CONSTRUCTOR Create(AOwner: TComponent); OVERRIDE;
+    DESTRUCTOR  Destroy();                  OVERRIDE;
+
+    PROCEDURE AddItem    (Item : TGridLayoutItem);
+    PROCEDURE RemoveItem (Item : TGridLayoutItem);
+
+    PROCEDURE AddRowDefinition       (RowDefinition    : TGridLayoutRowDefinition);
+    PROCEDURE RemoveRowDefinition    (RowDefinition    : TGridLayoutRowDefinition);
+
+    PROCEDURE AddColumnDefinition    (ColumnDefinition : TGridLayoutColumnDefinition);
+    PROCEDURE RemoveColumnDefinition (ColumnDefinition : TGridLayoutColumnDefinition);
+
+    PROPERTY  ColumnCount : Integer READ GetColumnCount;
+    PROPERTY  RowCount    : Integer READ GetRowCount;
+  PUBLISHED
+    PROPERTY Align;
+    PROPERTY Color;
+    PROPERTY ParentBackground;
+  END;
+
+PROCEDURE Register;
+
+
+IMPLEMENTATION
+
+
+
+{ TGridLayoutLength }
+
+CONSTRUCTOR TGridLayoutLength.Create( factor   : Single;
+                                      sizeMode : TGridLayoutSizeMode);
+BEGIN
+  self.Factor   := factor;
+  self.SizeMode := sizeMode;
+END;
+
+{ TGridLayoutDefinitionBase }
+
+CONSTRUCTOR TGridLayoutDefinitionBase.Create(SizeMode : TGridLayoutSizeMode;
+                                             Factor   : Single);
+BEGIN
+  FValue.SizeMode := SizeMode;
+
+  CASE SizeMode OF
+    gsmAutosize : FValue.Factor := 0;
+    gsmStar     : FValue.Factor := Factor;
+    gsmPixels   : FValue.Factor := Trunc(Factor);
+  END;
+END;
+
+CONSTRUCTOR TGridLayoutDefinitionBase.CreateAutoSize;
+BEGIN
+  FValue.Factor   := 0;
+  FValue.SizeMode := gsmAutosize;
+END;
+
+FUNCTION TGridLayoutDefinitionBase.GetFactor: Single;
+BEGIN
+  Result := FValue.Factor;
+END;
+
+{ TGridLayoutItem }
+
+CONSTRUCTOR TGridLayoutItem.Create(Control: TWinControl; Row, Column: Integer);
+BEGIN
+  FControl := Control;
+  FRow     := Row;
+  FColumn  := Column;
+END;
+
+{ TGridLayout }
+
+CONSTRUCTOR TGridLayout.Create(AOwner: TComponent);
+BEGIN
+  INHERITED Create(AOwner);
+
+  FItems     := TObjectList<TGridLayoutItem>.Create();
+  FRowDef    := TObjectList<TGridLayoutRowDefinition>.Create();
+  FColumnDef := TObjectList<TGridLayoutColumnDefinition>.Create();
+
+  FImplicitRowDef    := TGridLayoutRowDefinition.Create(gsmStar, 1);
+  FImplicitColumnDef := TGridLayoutColumnDefinition.Create(gsmStar,1);
+
+  FRowDef.Add(FImplicitRowDef);
+  FColumnDef.Add(FImplicitColumnDef);
+
+  Color := clWhite;
+END;
+
+
+DESTRUCTOR TGridLayout.Destroy;
+BEGIN
+  FreeAndNil(FItems);
+  FreeAndNil(FRowDef);
+  FreeAndNil(FColumnDef);
+
+  INHERITED;
+END;
+
+
+FUNCTION TGridLayout.GetColumnCount: Integer;
+BEGIN
+  Result := FColumnDef.Count;
+END;
+
+FUNCTION TGridLayout.GetRowCount: Integer;
+BEGIN
+  Result := FRowDef.Count;
+END;
+
+PROCEDURE TGridLayout.AddItem(Item: TGridLayoutItem);
+BEGIN
+  Assert(Assigned(Item));
+
+  FItems.Add(Item);
+
+  Item.FControl.Parent := self;
+END;
+
+PROCEDURE TGridLayout.RemoveItem(Item: TGridLayoutItem);
+BEGIN
+  Assert(Assigned(Item));
+
+  FItems.Remove(Item);
+END;
+
+
+PROCEDURE TGridLayout.AddColumnDefinition(ColumnDefinition: TGridLayoutColumnDefinition);
+BEGIN
+  Assert(Assigned(ColumnDefinition));
+  Assert(ColumnDefinition<>FImplicitColumnDef, 'Can not add implicit definition.');
+
+  // Ensure that the implicit definition is always the last definition
+  // TODO: insert copy
+  FColumnDef.Insert(FColumnDef.Count-1, ColumnDefinition);
+END;
+
+
+PROCEDURE TGridLayout.AddRowDefinition(RowDefinition: TGridLayoutRowDefinition);
+BEGIN
+  Assert(Assigned(RowDefinition));
+  Assert(RowDefinition<>FImplicitRowDef, 'Can not add implicit definition.');
+
+  // Ensure that the implicit definition is always the last definition
+  FRowDef.Insert(FRowDef.Count-1, RowDefinition);
+END;
+
+
+PROCEDURE TGridLayout.RemoveColumnDefinition(ColumnDefinition: TGridLayoutColumnDefinition);
+BEGIN
+  Assert(ColumnDefinition<>FImplicitColumnDef, 'Can not remove implicit definition.');
+
+  FColumnDef.Remove(ColumnDefinition);
+END;
+
+
+PROCEDURE TGridLayout.RemoveRowDefinition(RowDefinition: TGridLayoutRowDefinition);
+BEGIN
+  Assert(RowDefinition<>FImplicitRowDef, 'Can not remove implicit definition.');
+
+  FRowDef.Remove(RowDefinition);
+END;
+
+
+PROCEDURE TGridLayout.AlignControls  (    AControl : TControl;
+                                      VAR Rect     : TRect);
+
+VAR i, c, r : Integer;
+    Item : TGridLayoutItem;
+
+    ColDef  : TGridLayoutColumnDefinition;
+    RowDef  : TGridLayoutRowDefinition;
+
+    Width      : Single;
+    Height     : Single;
+
+    SumNonStarWidth  : Single;
+    SumNonStarHeight : Single;
+
+    SumStarFactorsHorizontal : Single; // the sum of all sum factors in the column definitions
+    SumStarFactorsVertical   : Single;
+
+    StarWidthRemainder  : Single;
+    StarHeightRemainder : Single;
+
+    CtrlBounds : TRect;
+
+BEGIN
+
+  IF FItems.Count > 0 THEN BEGIN
+    AdjustClientRect(Rect);
+
+    SetLength(FColumns, FColumnDef.Count);
+    SetLength(FRows   , FRowDef.Count);
+
+    SumNonStarWidth  := 0;
+    SumNonStarHeight := 0;
+
+    SumStarFactorsHorizontal := 0;
+    SumStarFactorsVertical   := 0;
+
+
+    // 1. pass - calculate row/column values for none star row/columns
+    FOR c := 0 TO Length(FColumns)-1 DO BEGIN
+      ColDef := FColumnDef[c];
+      Width  := ColumnWidthAtIndex(c);
+
+      IF ColDef.FValue.SizeMode = gsmStar THEN BEGIN
+        SumStarFactorsHorizontal := SumStarFactorsHorizontal + Width;
+      END
+      ELSE BEGIN
+        SumNonStarWidth := SumNonStarWidth + Width;
+      END;
+
+      FColumns[c].Width := Width;
+      FColumns[c].Definition := colDef;
+    END;
+
+
+    FOR r := 0 TO Length(FRows)-1 DO BEGIN
+      RowDef := FRowDef[r];
+      Height := RowHeightAtIndex(r);
+
+      IF RowDef.FValue.SizeMode = gsmStar THEN BEGIN
+        SumStarFactorsVertical := SumStarFactorsVertical + Height;
+      END
+      ELSE BEGIN
+        SumNonStarHeight := SumNonStarHeight + Height;
+      END;
+
+      FRows[r].Height := Height;
+      FRows[r].Definition := rowDef;
+    END;
+
+    StarWidthRemainder  := Rect.Width - SumNonStarWidth; // TODO ist Rect richtig?
+    StarHeightRemainder := Rect.Height - SumNonStarHeight;
+
+
+    // 2. pass - calculate star fractions
+    // for columns
+    FOR c := 0 TO Length(FColumns)-1 DO BEGIN
+      IF FColumns[c].Definition.FValue.SizeMode = gsmStar THEN BEGIN
+        // calculate width for star
+        FColumns[c].Width := (StarWidthRemainder / SumStarFactorsHorizontal) * FColumns[c].Definition.Width;
+      END;
+
+      // set minX
+      IF (c = 0)
+      THEN FColumns[c].MinX := 0
+      ELSE FColumns[c].MinX := FColumns[c-1].MinX + FColumns[c-1].Width;
+    END;
+
+    // and rows
+    FOR r := 0 TO Length(FRows)-1 DO BEGIN
+      IF FRows[r].Definition.FValue.SizeMode = gsmStar THEN BEGIN
+        FRows[r].Height := (StarHeightRemainder / SumStarFactorsVertical) * FRows[r].Definition.Height;
+      END;
+
+       // set minY
+      IF (r = 0)
+      THEN FRows[r].MinY := 0
+      ELSE FRows[r].MinY := FRows[r-1].MinY + FRows[r-1].Height;
+    END;
+
+
+    // 3. pass - enum all items and set frames
+    FOR i := 0 TO FItems.Count-1 DO BEGIN
+      Item := FItems[i];
+
+      // skip invalid items
+      IF   (Item = NIL)
+        OR (Item.FControl = NIL)
+        OR (NOT Item.FControl.Visible)
+        OR (Item.FRow > FRowDef.Count)
+        OR (Item.FColumn > FColumnDef.Count) THEN BEGIN
+        Continue;
+      END;
+
+// TODO
+//      // if items view is not already a subview, add it
+//      if (item.view.superview != self) {
+//          [self insertSubview:item.view atIndex:itemIndex];
+//      }
+
+      // TODO Align, Margin
+      // Set Control Bounds
+      CtrlBounds.Top  := Trunc(FRows[Item.FRow].MinY);
+      CtrlBounds.Left := Trunc(FColumns[Item.FColumn].MinX);
+
+      IF FColumns[Item.FColumn].Definition.FValue.SizeMode = gsmAutosize THEN BEGIN
+        CtrlBounds.Width := Item.FControl.BoundsRect.Width;
+      END
+      ELSE BEGIN
+        CtrlBounds.Width := Trunc(FColumns[Item.FColumn].Width);
+      END;
+
+      IF FRows[Item.FRow].Definition.FValue.SizeMode = gsmAutoSize THEN BEGIN
+        CtrlBounds.Height := Item.FControl.BoundsRect.Height;
+      END
+      ELSE BEGIN
+        CtrlBounds.Height := Trunc(FRows[Item.FRow].Height);
+      END;
+
+      Item.FControl.BoundsRect := CtrlBounds;
+    END;
+
+    ControlsAligned();
+  END; // of FItems.Count > 0
+
+  IF Showing THEN BEGIN
+    AdjustSize;
+  END;
+END;
+
+
+FUNCTION TGridLayout.ColumnWidthAtIndex(ColumnIndex: Integer): Single;
+VAR colDef   : TGridLayoutColumnDefinition;
+    maxWidth : Single;
+    item     : TGridLayoutItem;
+BEGIN
+  colDef := FColumnDef[ColumnIndex];
+
+  IF (colDef.FValue.SizeMode = gsmAutosize) THEN BEGIN
+    // find widest view in column
+    maxWidth := 0;
+
+    FOR item IN FItems DO BEGIN
+      IF (item.FColumn = ColumnIndex) THEN BEGIN
+        maxWidth := Max(item.FControl.Width, maxWidth);
+      END;
+    END;
+
+    Result := maxWidth;
+  END
+  ELSE BEGIN
+    Result := colDef.Width;
+  END;
+END;
+
+
+FUNCTION TGridLayout.RowHeightAtIndex(RowIndex: Integer): Single;
+VAR rowDef    : TGridLayoutRowDefinition;
+    maxHeight : Single;
+    item      : TGridLayoutItem;
+BEGIN
+  rowDef := FRowDef[RowIndex];
+
+  IF (rowDef.FValue.SizeMode = gsmAutosize) THEN BEGIN
+    // find tallest view in row
+    maxHeight := 0;
+
+    FOR item IN FItems DO BEGIN
+      IF (item.FRow = RowIndex) THEN BEGIN
+        maxHeight := Max(item.FControl.Height, maxHeight);
+      END;
+    END;
+
+    Result := maxHeight;
+  END
+  ELSE BEGIN
+    Result := rowDef.Height;
+  END;
+END;
+
+
+PROCEDURE TGridLayout.Paint;
+VAR Loop : Integer;
+BEGIN
+  INHERITED;
+
+  // Background
+  Canvas.Brush.Color := Color;
+  Canvas.FillRect(self.ClientRect);
+
+  IF TRUE OR (csDesigning IN ComponentState) {AND FShowHelpLines} THEN BEGIN
+    Canvas.Brush.Style := bsClear;
+    Canvas.Pen.Color   := clWhite;
+    Canvas.Pen.Mode    := pmXor;
+    Canvas.Pen.Style   := psDot;
+
+
+    IF Length(FRows) >= 2 THEN BEGIN
+      FOR Loop := 0 TO Length(FRows)-2 DO BEGIN
+        Canvas.MoveTo(0          , Trunc(FRows[Loop].MinY + FRows[Loop].Height));
+        Canvas.LineTo(ClientWidth, Trunc(FRows[Loop].MinY + FRows[Loop].Height));
+      END;
+    END;
+
+    IF Length(FColumns) >= 2 THEN BEGIN
+      FOR Loop := 0 TO Length(FColumns)-2 DO BEGIN
+        Canvas.MoveTo(Trunc(FColumns[Loop].MinX + FColumns[Loop].Width), 0);
+        Canvas.LineTo(Trunc(FColumns[Loop].MinX + FColumns[Loop].Width), ClientHeight);
+      END;
+    END;
+  END;
+END;
+
+
+PROCEDURE Register;
+BEGIN
+  RegisterComponents('ProLogic', [TGridLayout]);
+END;
+
+
+END.

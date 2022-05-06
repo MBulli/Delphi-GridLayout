@@ -32,6 +32,7 @@ USES
 TYPE
   TGridLayoutSizeMode = (gsmPixels, gsmStar, gsmAutosize);
 
+  TGridLayout = CLASS;
 
   TGridLayoutDefinitionBase = CLASS(TCollectionItem)
   PROTECTED
@@ -97,8 +98,13 @@ TYPE
     PROCEDURE SetColumn (NewValue : Integer);
     PROCEDURE SetRow    (NewValue : Integer);
 
+  PROTECTED
+    FUNCTION GetDisplayName : STRING; OVERRIDE;
+
   PUBLIC
     CONSTRUCTOR Create(Collection: TCollection); OVERRIDE;
+
+    FUNCTION OwningLayout : TGridLayout;
 
   PUBLISHED
     PROPERTY Control : TControl READ FControl WRITE SetControl;
@@ -329,6 +335,29 @@ BEGIN
 END;
 
 
+FUNCTION TGridLayoutItem.GetDisplayName: STRING;
+BEGIN
+  VAR CtrlName := 'nil';
+
+  IF Assigned(FControl) THEN BEGIN
+    IF FControl.Name <> '' THEN BEGIN
+      CtrlName := FControl.Name;
+    END
+    ELSE BEGIN
+      CtrlName := FControl.ClassName;
+    END;
+  END;
+
+  Result := Format('%s[%d, %d] (%s)', [ClassName, FColumn, FRow, CtrlName]);
+END;
+
+
+FUNCTION TGridLayoutItem.OwningLayout: TGridLayout;
+BEGIN
+  Result := Collection.Owner AS TGridLayout;
+END;
+
+
 PROCEDURE TGridLayoutItem.SetColumn(NewValue: Integer);
 BEGIN
   IF NewValue <> FColumn THEN BEGIN
@@ -370,8 +399,6 @@ PROCEDURE TGridLayoutItem.SetControl(NewValue: TControl);
 
     Result := FALSE;
 
-    VAR Collection := (GetOwner AS TOwnedCollection);
-
     FOR VAR I := 0 TO Collection.Count-1  DO BEGIN
       VAR Item := Collection.Items[I] AS TGridLayoutItem;
 
@@ -400,8 +427,6 @@ BEGIN
     FOrigCtrlWndProc := NIL;
 
     IF Assigned(FControl) THEN BEGIN
-      VAR OwningLayout := ((GetOwner AS TOwnedCollection).Owner AS TGridLayout);
-
       // Set Parent if necessary
       IF (FControl.Parent <> OwningLayout) THEN BEGIN
         FControl.Parent := OwningLayout;

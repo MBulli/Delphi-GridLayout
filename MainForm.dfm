@@ -53,20 +53,29 @@ object Form1: TForm1
     Items = <
       item
         Control = Button3
-        Column = 0
-        Row = 0
+        Column = 2
+        Row = 1
       end
       item
+        Control = Button1
         Column = 0
         Row = 0
       end>
     object Button3: TButton
+      Left = 150
+      Top = 100
+      Width = 201
+      Height = 50
+      Caption = 'Button3'
+      TabOrder = 0
+    end
+    object Button1: TButton
       Left = 0
       Top = 0
       Width = 50
       Height = 100
-      Caption = 'Button3'
-      TabOrder = 0
+      Caption = 'Button1'
+      TabOrder = 1
     end
   end
   object GridPanel1: TGridPanel
@@ -131,20 +140,16 @@ object Form1: TForm1
     Caption = 'Panel1'
     TabOrder = 3
   end
-  object Button1: TButton
-    Left = 368
-    Top = 88
-    Width = 100
-    Height = 100
-    Caption = 'Button1'
-    TabOrder = 4
-  end
   object Button2: TButton
     Left = 474
     Top = 32
     Width = 100
     Height = 100
     Caption = 'Button2'
-    TabOrder = 5
+    TabOrder = 4
+  end
+  object Timer1: TTimer
+    Left = 480
+    Top = 520
   end
 end

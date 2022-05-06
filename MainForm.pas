@@ -17,6 +17,7 @@ type
     Button3: TButton;
     Panel1: TPanel;
     Button4: TButton;
+    Timer1: TTimer;
     procedure FormCreate(Sender: TObject);
   private
     { Private declarations }

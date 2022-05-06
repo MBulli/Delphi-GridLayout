@@ -12,12 +12,14 @@ type
     GridLayout1: TGridLayout;
     GridPanel1: TGridPanel;
     StackPanel1: TStackPanel;
-    Button1: TButton;
-    Button2: TButton;
-    Button3: TButton;
     Panel1: TPanel;
     Button4: TButton;
     Timer1: TTimer;
+    Button1: TButton;
+    Button2: TButton;
+    Button3: TButton;
+    GridLayout2: TGridLayout;
+    Button5: TButton;
     procedure FormCreate(Sender: TObject);
   private
     { Private declarations }

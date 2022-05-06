@@ -52,29 +52,29 @@ object Form1: TForm1
       end>
     Items = <
       item
-        Control = Button3
+        Control = Button2
         Column = 2
-        Row = 1
+        Row = 0
       end
       item
-        Control = Button1
-        Column = 0
-        Row = 0
+        Control = Button3
+        Column = 1
+        Row = 1
       end>
-    object Button3: TButton
+    object Button2: TButton
       Left = 150
-      Top = 100
-      Width = 201
-      Height = 50
-      Caption = 'Button3'
-      TabOrder = 0
-    end
-    object Button1: TButton
-      Left = 0
       Top = 0
-      Width = 50
+      Width = 201
       Height = 100
       Caption = 'Button1'
+      TabOrder = 0
+    end
+    object Button3: TButton
+      Left = 50
+      Top = 100
+      Width = 100
+      Height = 50
+      Caption = 'Button3'
       TabOrder = 1
     end
   end
@@ -133,20 +133,60 @@ object Form1: TForm1
     TabOrder = 2
   end
   object Panel1: TPanel
-    Left = 432
-    Top = 202
+    Left = 639
+    Top = 441
     Width = 185
-    Height = 185
+    Height = 102
     Caption = 'Panel1'
     TabOrder = 3
   end
-  object Button2: TButton
-    Left = 474
-    Top = 32
-    Width = 100
-    Height = 100
-    Caption = 'Button2'
+  object Button1: TButton
+    Left = 400
+    Top = 24
+    Width = 75
+    Height = 25
+    Caption = 'Button1'
     TabOrder = 4
+  end
+  object GridLayout2: TGridLayout
+    Left = 384
+    Top = 88
+    Width = 185
+    Height = 327
+    Color = clWhite
+    ParentBackground = False
+    ColumnDefinition = <
+      item
+        Mode = gsmStar
+        Width = 1.000000000000000000
+      end>
+    RowDefinitions = <
+      item
+        Mode = gsmPixels
+        Height = 50.000000000000000000
+      end
+      item
+        Mode = gsmPixels
+        Height = 100.000000000000000000
+      end
+      item
+        Mode = gsmPixels
+        Height = 100.000000000000000000
+      end>
+    Items = <
+      item
+        Control = Button5
+        Column = 0
+        Row = 0
+      end>
+    object Button5: TButton
+      Left = 0
+      Top = 0
+      Width = 183
+      Height = 50
+      Caption = 'Button5'
+      TabOrder = 0
+    end
   end
   object Timer1: TTimer
     Left = 480

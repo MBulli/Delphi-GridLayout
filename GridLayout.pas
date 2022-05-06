@@ -86,7 +86,7 @@ TYPE
 
     PROCEDURE DesignControlWndProcHook(VAR Message: TMessage);
 
-  PRIVATE
+  STRICT PRIVATE
     FControl : TControl;
     FColumn  : Integer;
     FRow     : Integer;
@@ -315,8 +315,11 @@ BEGIN
 
   IF (csDesigning IN FControl.ComponentState) THEN BEGIN
     IF Message.Msg = WM_WINDOWPOSCHANGED THEN BEGIN
-      IF TRUE {((GetAsyncKeyState(VK_CONTROL) AND $8000)<>0)} THEN BEGIN
 
+      VAR WinPosMsg := TWMWindowPosChanged(Message);
+
+      // If control is moved
+      IF ((WinPosMsg.WindowPos.flags AND SWP_NOMOVE) = 0) THEN BEGIN
         VAR OwningLayout := FControl.Parent AS TGridLayout;
         VAR Position := OwningLayout.ScreenToClient(Mouse.CursorPos);
 
@@ -340,15 +343,16 @@ BEGIN
   VAR CtrlName := 'nil';
 
   IF Assigned(FControl) THEN BEGIN
-    IF FControl.Name <> '' THEN BEGIN
-      CtrlName := FControl.Name;
-    END
-    ELSE BEGIN
-      CtrlName := FControl.ClassName;
-    END;
+    IF FControl.Name <> ''
+    THEN CtrlName := FControl.Name
+    ELSE CtrlName := FControl.ClassName;
   END;
 
   Result := Format('%s[%d, %d] (%s)', [ClassName, FColumn, FRow, CtrlName]);
+
+  IF Assigned(FOrigCtrlWndProc) THEN BEGIN
+    Result := Result + ' H';
+  END;
 END;
 
 
@@ -409,38 +413,39 @@ PROCEDURE TGridLayoutItem.SetControl(NewValue: TControl);
   END;
 
 BEGIN
+  IF NewValue = FControl THEN EXIT;
+
+  // Prevent that multiple TGridLayoutItems reference the same TControl
   IF _ControlAlreadyAssigned THEN BEGIN
     EXIT;
   END;
 
-  IF NewValue <> FControl THEN BEGIN
-    // Reset old control state
-    IF FControl <> NIL THEN BEGIN
-      IF Assigned(FOrigCtrlWndProc) THEN BEGIN
-        FControl.WindowProc := FOrigCtrlWndProc;
-        FOrigCtrlWndProc := NIL;
-      END;
+  // Reset old control state
+  IF FControl <> NIL THEN BEGIN
+    IF Assigned(FOrigCtrlWndProc) THEN BEGIN
+      FControl.WindowProc := FOrigCtrlWndProc;
+      FOrigCtrlWndProc := NIL;
     END;
-
-    // Set new control
-    FControl := NewValue;
-    FOrigCtrlWndProc := NIL;
-
-    IF Assigned(FControl) THEN BEGIN
-      // Set Parent if necessary
-      IF (FControl.Parent <> OwningLayout) THEN BEGIN
-        FControl.Parent := OwningLayout;
-      END;
-
-      // Hook window for drag and drop form designer hack
-      IF _ShouldHookWndProc THEN BEGIN
-        FOrigCtrlWndProc := FControl.WindowProc;
-        FControl.WindowProc := DesignControlWndProcHook;
-      END;
-    END;
-
-    Changed(false);
   END;
+
+  // Set new control
+  FControl := NewValue;
+  FOrigCtrlWndProc := NIL;
+
+  IF Assigned(FControl) THEN BEGIN
+    // Set Parent if necessary
+    IF (FControl.Parent <> OwningLayout) THEN BEGIN
+      FControl.Parent := OwningLayout;
+    END;
+
+    // Hook window for drag and drop form designer hack
+    IF _ShouldHookWndProc THEN BEGIN
+      FOrigCtrlWndProc := FControl.WindowProc;
+      FControl.WindowProc := DesignControlWndProcHook;
+    END;
+  END;
+
+  Changed(false);
 END;
 
 { TGridLayoutItemCollection }
@@ -517,11 +522,9 @@ BEGIN
 
   VAR Item := FItems.Add AS TGridLayoutItem;
 
-  Item.FControl := Control;
-  Item.FColumn  := Column;
-  Item.FRow     := Row;
-
-  Item.FControl.Parent := self;
+  Item.Column  := Column;
+  Item.Row     := Row;
+  Item.Control := Control;
 END;
 
 
@@ -629,20 +632,21 @@ BEGIN
       IF Message.Inserting AND (Message.Control.Parent = Self) THEN BEGIN
         //Message.Control.Anchors := [];
 
-        VAR ControlAlreadyAssigned := FALSE;
-
         FOR VAR I := 0 TO FItems.Count-1 DO BEGIN
           VAR Item := FItems.Items[I] AS TGridLayoutItem;
 
           IF Item.Control = Message.Control THEN BEGIN
-            ControlAlreadyAssigned := TRUE;
-            BREAK;
+            // Control already assigned. Do nothing
+            EXIT;
           END;
         END;
 
-        IF NOT ControlAlreadyAssigned THEN BEGIN
-          AddItem(Message.Control, 0, 1);
-        END;
+        VAR CtrlScreenRect := Message.Control.ClientToScreen(Message.Control.ClientRect);
+        VAR ClientPos := ScreenToClient(CtrlScreenRect.Location);
+        VAR Col := ColumnIndexFromPos(ClientPos);
+        VAR Row := RowIndexFromPos(ClientPos);
+
+        AddItem(Message.Control, Row, Col);
       END
       ELSE BEGIN
         RemoveItemForControl(Message.Control);
@@ -651,7 +655,6 @@ BEGIN
       EnableAlign;
     END;
   END;
-
 END;
 
 
@@ -764,10 +767,11 @@ BEGIN
 
       // skip invalid items
       IF   (Item = NIL)
-        OR (Item.FControl = NIL)
-        OR (NOT Item.FControl.Visible)
-        OR (Item.FRow > FRowDef.Count)
-        OR (Item.FColumn > FColumnDef.Count) THEN BEGIN
+        OR (Item.Control = NIL)
+        OR (NOT Item.Control.Visible)
+        OR (NOT InRange(Item.Row, 0, FRowDef.Count-1))
+        OR (NOT InRange(Item.Column, 0, FColumnDef.Count-1))
+      THEN BEGIN
         Continue;
       END;
 
@@ -779,24 +783,24 @@ BEGIN
 
       // TODO Align, Margin
       // Set Control Bounds
-      CtrlBounds.Top  := Trunc(FRows[Item.FRow].MinY);
-      CtrlBounds.Left := Trunc(FColumns[Item.FColumn].MinX);
+      CtrlBounds.Top  := Trunc(FRows[Item.Row].MinY);
+      CtrlBounds.Left := Trunc(FColumns[Item.Column].MinX);
 
-      IF FColumns[Item.FColumn].Definition.FMode = gsmAutosize THEN BEGIN
-        CtrlBounds.Width := Item.FControl.BoundsRect.Width;
+      IF FColumns[Item.Column].Definition.FMode = gsmAutosize THEN BEGIN
+        CtrlBounds.Width := Item.Control.BoundsRect.Width;
       END
       ELSE BEGIN
-        CtrlBounds.Width := Trunc(FColumns[Item.FColumn].Width);
+        CtrlBounds.Width := Trunc(FColumns[Item.Column].Width);
       END;
 
-      IF FRows[Item.FRow].Definition.FMode = gsmAutoSize THEN BEGIN
-        CtrlBounds.Height := Item.FControl.BoundsRect.Height;
+      IF FRows[Item.Row].Definition.FMode = gsmAutoSize THEN BEGIN
+        CtrlBounds.Height := Item.Control.BoundsRect.Height;
       END
       ELSE BEGIN
-        CtrlBounds.Height := Trunc(FRows[Item.FRow].Height);
+        CtrlBounds.Height := Trunc(FRows[Item.Row].Height);
       END;
 
-      Item.FControl.BoundsRect := CtrlBounds;
+      Item.Control.BoundsRect := CtrlBounds;
     END;
 
     ControlsAligned();
@@ -852,8 +856,8 @@ BEGIN
 
     FOR item IN FItems DO BEGIN
       WITH item AS TGridLayoutItem DO BEGIN
-        IF (FColumn = ColumnIndex) THEN BEGIN
-          maxWidth := Max(FControl.Width, maxWidth);
+        IF (Column = ColumnIndex) THEN BEGIN
+          maxWidth := Max(Control.Width, maxWidth);
         END;
       END;
     END;
@@ -880,8 +884,8 @@ BEGIN
 
     FOR item IN FItems DO BEGIN
       WITH item AS TGridLayoutItem DO BEGIN
-        IF (FRow = RowIndex) THEN BEGIN
-          maxHeight := Max(FControl.Height, maxHeight);
+        IF (Row = RowIndex) THEN BEGIN
+          maxHeight := Max(Control.Height, maxHeight);
         END;
       END;
     END;

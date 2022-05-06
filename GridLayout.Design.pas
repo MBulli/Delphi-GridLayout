@@ -44,6 +44,7 @@ TYPE TGridLayoutItemControlPropertyEditor = CLASS(TComponentProperty)
         PROCEDURE AddValue(CONST S : STRING);
         PROCEDURE GetValues(Proc : TGetStrProc);
 
+      PUBLIC
         CONSTRUCTOR Create;
         DESTRUCTOR  Destroy; OVERRIDE;
     END;

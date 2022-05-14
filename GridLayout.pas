@@ -379,17 +379,16 @@ END;
 
 PROCEDURE TGridLayoutItem.SetControl(NewValue: TControl);
 
-  FUNCTION _SameMethodPtr(CONST A, B : TMethod) : BOOLEAN; INLINE;
+  FUNCTION _AlreadyHooked(CONST Ctrl : TControl) : BOOLEAN; INLINE;
   BEGIN
-    Result := (A.Code = B.Code) AND (A.Data = B.Data);
+    Result := (TMethod(Ctrl.WindowProc).Code = @TGridLayoutItem.DesignControlWndProcHook);
   END;
 
   FUNCTION _ShouldHookWndProc: BOOLEAN;
   BEGIN
     IF NOT Assigned(FControl) THEN EXIT(FALSE);
-    IF Assigned(FOrigCtrlWndProc) AND (TMethod(FControl.WindowProc).Code = @TGridLayoutItem.DesignControlWndProcHook) THEN EXIT(FALSE);
-    IF Assigned(FOrigCtrlWndProc) AND _SameMethodPtr(TMethod(FControl.WindowProc), TMethod(FOrigCtrlWndProc)) THEN EXIT(FALSE);
     IF (csDestroying IN FControl.ComponentState) THEN EXIT(FALSE);
+    IF _AlreadyHooked(FControl) THEN EXIT(FALSE);
 
     Result := (csDesigning IN FControl.ComponentState);
   END;

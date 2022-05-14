@@ -2,7 +2,7 @@ object Form1: TForm1
   Left = 0
   Top = 0
   Caption = 'Form1'
-  ClientHeight = 551
+  ClientHeight = 461
   ClientWidth = 832
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -16,7 +16,7 @@ object Form1: TForm1
     Left = 0
     Top = 0
     Width = 353
-    Height = 551
+    Height = 461
     Align = alLeft
     Color = clWindow
     ParentBackground = False
@@ -28,6 +28,9 @@ object Form1: TForm1
       item
         Mode = gsmPixels
         Width = 100.000000000000000000
+      end
+      item
+        Mode = gsmPixels
       end
       item
         Mode = gsmStar
@@ -47,6 +50,10 @@ object Form1: TForm1
         Height = 10.000000000000000000
       end
       item
+        Mode = gsmPixels
+        Height = 50.000000000000000000
+      end
+      item
         Mode = gsmStar
         Height = 1.000000000000000000
       end>
@@ -64,7 +71,7 @@ object Form1: TForm1
     object Button2: TButton
       Left = 150
       Top = 0
-      Width = 201
+      Width = 0
       Height = 100
       Caption = 'Button1'
       TabOrder = 0
@@ -157,8 +164,12 @@ object Form1: TForm1
     ParentBackground = False
     ColumnDefinition = <
       item
-        Mode = gsmStar
-        Width = 1.000000000000000000
+        Mode = gsmPixels
+        Width = 100.000000000000000000
+      end
+      item
+        Mode = gsmPixels
+        Width = 90.000000000000000000
       end>
     RowDefinitions = <
       item
@@ -172,6 +183,10 @@ object Form1: TForm1
       item
         Mode = gsmPixels
         Height = 100.000000000000000000
+      end
+      item
+        Mode = gsmPixels
+        Height = 200.000000000000000000
       end>
     Items = <
       item
@@ -182,14 +197,14 @@ object Form1: TForm1
     object Button5: TButton
       Left = 0
       Top = 0
-      Width = 183
+      Width = 100
       Height = 50
       Caption = 'Button5'
       TabOrder = 0
     end
   end
   object Timer1: TTimer
-    Left = 480
-    Top = 520
+    Left = 496
+    Top = 472
   end
 end

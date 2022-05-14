@@ -134,8 +134,6 @@ TYPE
     END;
 
   PRIVATE
-    FShowHelpLines : Boolean; // debug only
-
     FItems     : TGridLayoutItemCollection; // TObjectList<TGridLayoutItem>;
     FRowDef    : TGridlayoutRowCollection;    // TObjectList<TGridLayoutRowDefinition>;
     FColumnDef : TGridLayoutColumnCollection; // TObjectList<TGridLayoutColumnDefinition>;
@@ -204,9 +202,6 @@ TYPE
     PROPERTY Items            : TGridLayoutItemCollection   READ FItems     WRITE SetItemCollection;
   END;
 
-PROCEDURE Register;
-
-
 IMPLEMENTATION
 
 { TGridLayoutDefinitionBase }
@@ -240,6 +235,8 @@ END;
 
 PROCEDURE TGridLayoutDefinitionBase.SetFactor(NewValue: Single);
 BEGIN
+  IF NewValue < 0 THEN EXIT;
+
   IF NewValue <> FFactor THEN BEGIN
     FFactor := NewValue;
     Changed(False);
@@ -899,7 +896,6 @@ END;
 
 
 PROCEDURE TGridLayout.Paint;
-VAR Loop : Integer;
 BEGIN
   INHERITED;
 
@@ -907,38 +903,69 @@ BEGIN
   Canvas.Brush.Color := Color;
   Canvas.FillRect(self.ClientRect);
 
-  IF TRUE OR (csDesigning IN ComponentState) {AND FShowHelpLines} THEN BEGIN
+  IF (csDesigning IN ComponentState) THEN BEGIN
     Canvas.Brush.Style := bsClear;
     Canvas.Pen.Color   := clWhite;
     Canvas.Pen.Mode    := pmXor;
     Canvas.Pen.Style   := psDot;
 
+    VAR RowOutOfBounds := FALSE;
+    VAR ColOutOfBounds := FALSE;
 
-    IF Length(FRows) >= 2 THEN BEGIN
-      FOR Loop := 0 TO Length(FRows)-2 DO BEGIN
-        WITH FRows[Loop] DO BEGIN
-          Canvas.MoveTo(0          , Trunc(MinY + Height));
-          Canvas.LineTo(ClientWidth, Trunc(MinY + Height));
-        END;
+    VAR ClientWidth := ClientWidth;
+    VAR ClientHeight := ClientHeight;
+
+    // If Row/Col Size is 0 pmXor deletes the old line  => Max(1, size)
+
+    // Rows
+    FOR VAR Loop := 0 TO Length(FRows)-1 DO BEGIN
+      VAR Row := FRows[Loop];
+
+      IF (Loop < Length(FRows)-1) OR (Row.Definition.Mode <> gsmStar) THEN BEGIN
+        VAR MaxY := Trunc(Row.MinY + Max(1, Row.Height));
+
+        Canvas.MoveTo(0 , MaxY);
+        Canvas.LineTo(ClientWidth, MaxY);
+
+        RowOutOfBounds := MaxY > ClientHeight;
       END;
     END;
 
-    IF Length(FColumns) >= 2 THEN BEGIN
-      FOR Loop := 0 TO Length(FColumns)-2 DO BEGIN
-        WITH FColumns[Loop] DO BEGIN
-          Canvas.MoveTo(Trunc(MinX + Width), 0);
-          Canvas.LineTo(Trunc(MinX + Width), ClientHeight);
-        END;
+    // Columns
+    FOR VAR Loop := 0 TO Length(FColumns)-1 DO BEGIN
+      VAR Col := FColumns[Loop];
+
+      IF (Loop < Length(FColumns)-1) OR (Col.Definition.Mode <> gsmStar) THEN BEGIN
+        VAR MaxX := Trunc(Col.MinX + Max(1, Col.Width));
+
+        Canvas.MoveTo(MaxX, 0);
+        Canvas.LineTo(MaxX, ClientHeight);
+
+        ColOutOfBounds := MaxX > ClientWidth;
+      END;
+    END;
+
+    // Highlight edge if some row or column is out of bounds
+    IF ColOutOfBounds OR RowOutOfBounds THEN BEGIN
+      Canvas.Brush.Style := bsClear;
+      Canvas.Pen.Color   := clRed;
+      Canvas.Pen.Mode    := pmCopy;
+      Canvas.Pen.Style   := psSolid;
+      Canvas.Pen.Width   := 2;
+
+      IF RowOutOfBounds THEN BEGIN
+        Canvas.MoveTo(0          , ClientHeight-1);
+        Canvas.LineTo(ClientWidth, ClientHeight-1);
+      END;
+
+      IF ColOutOfBounds THEN BEGIN
+        Canvas.MoveTo(ClientWidth-1, 0);
+        Canvas.LineTo(ClientWidth-1, ClientHeight);
       END;
     END;
   END;
 END;
 
-
-PROCEDURE Register;
-BEGIN
-  RegisterComponents('ProLogic', [TGridLayout]);
-END;
 
 
 

@@ -66,8 +66,9 @@ IMPLEMENTATION
 
 PROCEDURE Register;
 BEGIN
-  RegisterComponentEditor (TGridLayout, TGridLayoutEditor);
-  RegisterPropertyEditor  (TypeInfo(TControl), TGridLayoutItem, 'Control', TGridLayoutItemControlPropertyEditor);
+  RegisterComponents     ('ProLogic', [TGridLayout]);
+  RegisterComponentEditor(TGridLayout, TGridLayoutEditor);
+  RegisterPropertyEditor (TypeInfo(TControl), TGridLayoutItem, 'Control', TGridLayoutItemControlPropertyEditor);
 END;
 
 { TGridLayoutEditor }

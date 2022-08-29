@@ -157,9 +157,9 @@ object Form1: TForm1
   end
   object GridLayout2: TGridLayout
     Left = 384
-    Top = 88
+    Top = 55
     Width = 185
-    Height = 327
+    Height = 346
     Color = clWhite
     ParentBackground = False
     ColumnDefinition = <
@@ -186,7 +186,7 @@ object Form1: TForm1
       end
       item
         Mode = gsmPixels
-        Height = 200.000000000000000000
+        Height = 100.000000000000000000
       end>
     Items = <
       item

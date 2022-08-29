@@ -840,53 +840,47 @@ END;
 
 
 FUNCTION TGridLayout.ColumnWidthAtIndex(ColumnIndex: Integer): Single;
-VAR colDef   : TGridLayoutColumnDefinition;
-    maxWidth : Single;
-    item     : TCollectionItem;
 BEGIN
-  colDef := FColumnDef.Items[ColumnIndex] AS TGridLayoutColumnDefinition;
+  VAR ColDef := FColumnDef.Items[ColumnIndex] AS TGridLayoutColumnDefinition;
 
-  IF (colDef.FMode = gsmAutosize) THEN BEGIN
+  IF (ColDef.FMode = gsmAutosize) THEN BEGIN
     // find widest view in column
-    maxWidth := 0;
+    VAR MaxWidth := 0.0;
 
-    FOR item IN FItems DO BEGIN
-      WITH item AS TGridLayoutItem DO BEGIN
+    FOR VAR Item IN FItems DO BEGIN
+      WITH Item AS TGridLayoutItem DO BEGIN
         IF (Column = ColumnIndex) THEN BEGIN
-          maxWidth := Max(Control.Width, maxWidth);
+          MaxWidth := Max(Control.Width, MaxWidth);
         END;
       END;
     END;
 
-    Result := maxWidth;
+    Result := MaxWidth;
   END
   ELSE BEGIN
-    Result := colDef.Width;
+    Result := ColDef.Width;
   END;
 END;
 
 
 
 FUNCTION TGridLayout.RowHeightAtIndex(RowIndex: Integer): Single;
-VAR rowDef    : TGridLayoutRowDefinition;
-    maxHeight : Single;
-    item      : TCollectionItem;
 BEGIN
-  rowDef := FRowDef.Items[RowIndex] AS TGridLayoutRowDefinition;
+  VAR RowDef := FRowDef.Items[RowIndex] AS TGridLayoutRowDefinition;
 
-  IF (rowDef.FMode = gsmAutosize) THEN BEGIN
+  IF (RowDef.FMode = gsmAutosize) THEN BEGIN
     // find tallest view in row
-    maxHeight := 0;
+    VAR MaxHeight := 0.0;
 
-    FOR item IN FItems DO BEGIN
-      WITH item AS TGridLayoutItem DO BEGIN
+    FOR VAR Item IN FItems DO BEGIN
+      WITH Item AS TGridLayoutItem DO BEGIN
         IF (Row = RowIndex) THEN BEGIN
-          maxHeight := Max(Control.Height, maxHeight);
+          MaxHeight := Max(Control.Height, MaxHeight);
         END;
       END;
     END;
 
-    Result := maxHeight;
+    Result := MaxHeight;
   END
   ELSE BEGIN
     Result := rowDef.Height;
@@ -964,12 +958,5 @@ BEGIN
     END;
   END;
 END;
-
-
-
-
-
-
-
 
 END.

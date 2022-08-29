@@ -654,29 +654,7 @@ BEGIN
 END;
 
 
-PROCEDURE TGridLayout.AlignControls  (    AControl : TControl;
-                                      VAR Rect     : TRect);
-
-VAR i, c, r : Integer;
-    Item : TGridLayoutItem;
-
-    ColDef  : TGridLayoutColumnDefinition;
-    RowDef  : TGridLayoutRowDefinition;
-
-    Width      : Single;
-    Height     : Single;
-
-    SumNonStarWidth  : Single;
-    SumNonStarHeight : Single;
-
-    SumStarFactorsHorizontal : Single; // the sum of all sum factors in the column definitions
-    SumStarFactorsVertical   : Single;
-
-    StarWidthRemainder  : Single;
-    StarHeightRemainder : Single;
-
-    CtrlBounds : TRect;
-
+PROCEDURE TGridLayout.AlignControls(AControl : TControl; VAR Rect : TRect);
 BEGIN
   IF (FItems.Count > 0) OR (csDesigning IN ComponentState) THEN BEGIN
     AdjustClientRect(Rect);
@@ -684,17 +662,18 @@ BEGIN
     SetLength(FColumns, FColumnDef.Count);
     SetLength(FRows   , FRowDef.Count);
 
-    SumNonStarWidth  := 0;
-    SumNonStarHeight := 0;
+    VAR SumNonStarWidth  : Single := 0.0;
+    VAR SumNonStarHeight : Single := 0.0;
 
-    SumStarFactorsHorizontal := 0;
-    SumStarFactorsVertical   := 0;
+    // the sum of all sum factors in the column definitions
+    VAR SumStarFactorsHorizontal : Single := 0.0;
+    VAR SumStarFactorsVertical   : Single := 0.0;
 
 
     // 1. pass - calculate row/column values for none star row/columns
-    FOR c := 0 TO Length(FColumns)-1 DO BEGIN
-      ColDef := FColumnDef.Items[c] AS TGridLayoutColumnDefinition;
-      Width  := ColumnWidthAtIndex(c);
+    FOR VAR C := 0 TO Length(FColumns)-1 DO BEGIN
+      VAR ColDef := FColumnDef.Items[C] AS TGridLayoutColumnDefinition;
+      VAR Width  := ColumnWidthAtIndex(C);
 
       IF ColDef.FMode = gsmStar THEN BEGIN
         SumStarFactorsHorizontal := SumStarFactorsHorizontal + Width;
@@ -708,9 +687,9 @@ BEGIN
     END;
 
 
-    FOR r := 0 TO Length(FRows)-1 DO BEGIN
-      RowDef := FRowDef.Items[r] AS TGridLayoutRowDefinition;
-      Height := RowHeightAtIndex(r);
+    FOR VAR R := 0 TO Length(FRows)-1 DO BEGIN
+      VAR RowDef := FRowDef.Items[R] AS TGridLayoutRowDefinition;
+      VAR Height := RowHeightAtIndex(R);
 
       IF RowDef.FMode = gsmStar THEN BEGIN
         SumStarFactorsVertical := SumStarFactorsVertical + Height;
@@ -723,43 +702,43 @@ BEGIN
       FRows[r].Definition := rowDef;
     END;
 
-    StarWidthRemainder  := Rect.Width - SumNonStarWidth; // TODO ist Rect richtig?
-    StarHeightRemainder := Rect.Height - SumNonStarHeight;
+    VAR StarWidthRemainder  := Rect.Width - SumNonStarWidth; // TODO ist Rect richtig?
+    VAR StarHeightRemainder := Rect.Height - SumNonStarHeight;
 
 
     // 2. pass - calculate star fractions
     // for columns
-    FOR c := 0 TO Length(FColumns)-1 DO BEGIN
+    FOR VAR C := 0 TO Length(FColumns)-1 DO BEGIN
 
       // calculate width for star
-      IF FColumns[c].Definition.FMode = gsmStar THEN BEGIN
-        FColumns[c].Width := (StarWidthRemainder / SumStarFactorsHorizontal) * FColumns[c].Definition.Width;
+      IF FColumns[C].Definition.FMode = gsmStar THEN BEGIN
+        FColumns[C].Width := (StarWidthRemainder / SumStarFactorsHorizontal) * FColumns[C].Definition.Width;
       END;
 
       // set minX
-      IF (c = 0)
-      THEN FColumns[c].MinX := 0
-      ELSE FColumns[c].MinX := FColumns[c-1].MinX + FColumns[c-1].Width;
+      IF (C = 0)
+      THEN FColumns[C].MinX := 0
+      ELSE FColumns[C].MinX := FColumns[C-1].MinX + FColumns[C-1].Width;
     END;
 
     // and rows
-    FOR r := 0 TO Length(FRows)-1 DO BEGIN
+    FOR VAR R := 0 TO Length(FRows)-1 DO BEGIN
 
       // calculate height for star
-      IF FRows[r].Definition.FMode = gsmStar THEN BEGIN
-        FRows[r].Height := (StarHeightRemainder / SumStarFactorsVertical) * FRows[r].Definition.Height;
+      IF FRows[R].Definition.FMode = gsmStar THEN BEGIN
+        FRows[R].Height := (StarHeightRemainder / SumStarFactorsVertical) * FRows[R].Definition.Height;
       END;
 
        // set minY
-      IF (r = 0)
-      THEN FRows[r].MinY := 0
-      ELSE FRows[r].MinY := FRows[r-1].MinY + FRows[r-1].Height;
+      IF (R = 0)
+      THEN FRows[R].MinY := 0
+      ELSE FRows[R].MinY := FRows[R-1].MinY + FRows[R-1].Height;
     END;
 
 
     // 3. pass - enum all items and set frames
-    FOR i := 0 TO FItems.Count-1 DO BEGIN
-      Item := FItems.Items[i] AS TGridLayoutItem;
+    FOR VAR I := 0 TO FItems.Count-1 DO BEGIN
+      VAR Item := FItems.Items[I] AS TGridLayoutItem;
 
       // skip invalid items
       IF   (Item = NIL)
@@ -779,6 +758,7 @@ BEGIN
 
       // TODO Align, Margin
       // Set Control Bounds
+      VAR CtrlBounds  := Default(TRect);
       CtrlBounds.Top  := Trunc(FRows[Item.Row].MinY);
       CtrlBounds.Left := Trunc(FColumns[Item.Column].MinX);
 

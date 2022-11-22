@@ -20,8 +20,6 @@ USES
 {
  TODO:
  - RemoveCol/Row/Item methods
- - How to handle implicit row and column? Maybe add in Layout and Remove after? Or TCollection.Update
- - Prevent deletion of implicit row and column in Designer and Code
  - TComponent Editor
  - TextOut Values in Paint for Columns
  - Col/Row Span
@@ -172,11 +170,6 @@ TYPE
     FColumnDef : TGridLayoutColumnCollection; // TObjectList<TGridLayoutColumnDefinition>;
     FAlgorithm : TGridLayoutAlgorithm;
 
-    // We need at least one definition
-    // The last definition is always a filler with 1*
-    FImplicitRowDef    : TGridLayoutRowDefinition;
-    FImplicitColumnDef : TGridLayoutColumnDefinition;
-
     FUNCTION GetColumnCount () : Integer;
     FUNCTION GetRowCount    () : Integer;
 
@@ -226,7 +219,7 @@ TYPE
     PROPERTY Color;
     PROPERTY ParentBackground;
 
-    PROPERTY ColumnDefinition : TGridLayoutColumnCollection READ FColumnDef WRITE SetColumnDefinitionCollection;
+    PROPERTY ColumnDefinition : TGridLayoutColumnCollection READ FColumnDef WRITE SetColumnDefinitionCollection;   // TODO Missing s for ColumnDefinition
     PROPERTY RowDefinitions   : TGridLayoutRowCollection    READ FRowDef    WRITE SetRowDefinitionCollection;
     PROPERTY Items            : TGridLayoutItemCollection   READ FItems     WRITE SetItemCollection;
   END;
@@ -507,15 +500,6 @@ BEGIN
   FColumnDef := TGridLayoutColumnCollection.Create(self);
   FAlgorithm := TGridLayoutAlgorithm.Create(self);
 
-  FImplicitRowDef    := FRowDef.Add AS TGridLayoutRowDefinition;
-  FImplicitColumnDef := FColumnDef.Add AS TGridLayoutColumnDefinition;
-
-  FImplicitRowDef.FMode   := gsmStar;
-  FImplicitRowDef.FFactor := 1;
-
-  FImplicitColumnDef.FMode   := gsmStar;
-  FImplicitColumnDef.FFactor := 1;
-
   Color := clWhite;
 END;
 
@@ -571,8 +555,7 @@ END;
 
 PROCEDURE TGridLayout.AddColumn(Mode: TGridLayoutSizeMode; Factor: Single);
 BEGIN
-  // Ensure that the implicit definition is always the last definition
-  WITH FColumnDef.Insert(FColumnDef.Count-1) AS TGridLayoutColumnDefinition DO BEGIN
+  WITH FColumnDef.Add AS TGridLayoutColumnDefinition DO BEGIN
     FMode := Mode;
 
     CASE Mode OF
@@ -586,8 +569,7 @@ END;
 
 PROCEDURE TGridLayout.AddRow(Mode: TGridLayoutSizeMode; Factor: Single);
 BEGIN
-  // Ensure that the implicit definition is always the last definition
-  WITH FRowDef.Insert(FRowDef.Count-1) AS TGridLayoutRowDefinition DO BEGIN
+  WITH FRowDef.Add AS TGridLayoutRowDefinition DO BEGIN
     FMode := Mode;
 
     CASE Mode OF
@@ -611,7 +593,6 @@ END;
 // TODO
 //PROCEDURE TGridLayout.RemoveColumnDefinition(ColumnDefinition: TGridLayoutColumnDefinition);
 //BEGIN
-//  Assert(ColumnDefinition<>FImplicitColumnDef, 'Can not remove implicit definition.');
 //
 //  FColumnDef.Remove(ColumnDefinition);
 //END;
@@ -620,7 +601,6 @@ END;
 // TODO
 //PROCEDURE TGridLayout.RemoveRowDefinition(RowDefinition: TGridLayoutRowDefinition);
 //BEGIN
-//  Assert(RowDefinition<>FImplicitRowDef, 'Can not remove implicit definition.');
 //
 //  FRowDef.Remove(RowDefinition);
 //END;

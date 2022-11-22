@@ -27,6 +27,7 @@ USES
  - Col/Row Span
  - MinWidth/MinHeigth
  - Add "Row/Column" fake properties to controls https://edn.embarcadero.com/article/33448
+ - Row and Column names as optional alternative for indicies?
 }
 
 TYPE

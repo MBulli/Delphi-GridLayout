@@ -120,36 +120,62 @@ TYPE
     CONSTRUCTOR Create(AOwner: TPersistent);
   END;
 
+  TGridLayoutAlgorithm = CLASS
+    PRIVATE
+      TYPE TGridLayoutColumnTuple = RECORD
+        MinX       : Single;
+        Width      : Single;
+        Definition : TGridLayoutColumnDefinition
+      END;
+
+      TYPE TGridLayoutRowTuple = RECORD
+        MinY       : Single;
+        Height     : Single;
+        Definition : TGridLayoutRowDefinition
+      END;
+
+    STRICT PRIVATE
+      FParentLayout : TGridLayout;
+
+      // Calculated layout values
+      FColumns : TArray<TGridLayoutColumnTuple>;
+      FRows    : TArray<TGridLayoutRowTuple>;
+
+      FUNCTION GetColumnCount : INTEGER;  INLINE;
+      FUNCTION GetRowCount    : INTEGER;  INLINE;
+
+      FUNCTION GetColumn(Index : INTEGER) : TGridLayoutColumnTuple;  INLINE;
+      FUNCTION GetRow   (Index : INTEGER) : TGridLayoutRowTuple;     INLINE;
+
+
+      FUNCTION ColumnWidthAtIndex (ColumnIndex : Integer) : Single;
+      FUNCTION RowHeightAtIndex   (RowIndex    : Integer) : Single;
+
+    PUBLIC
+      CONSTRUCTOR Create(ParentLayout : TGridLayout);
+
+      PROCEDURE Calculate(ClientRect : TRect);
+
+      FUNCTION ControlRect(Row, Column : INTEGER; BoundsRect : TRect) : TRect;
+
+      PROPERTY ColumnCount : INTEGER READ GetColumnCount;
+      PROPERTY RowCount    : INTEGER READ GetRowCount;
+
+      PROPERTY Columns[Index : INTEGER] : TGridLayoutColumnTuple READ GetColumn;
+      PROPERTY Rows   [Index : INTEGER] : TGridLayoutRowTuple READ GetRow;
+  END;
+
   TGridLayout = CLASS(TCustomPanel)
-  PRIVATE
-    TYPE TGridLayoutColumnTuple = RECORD
-      MinX       : Single;
-      Width      : Single;
-      Definition : TGridLayoutColumnDefinition
-    END;
-
-    TYPE TGridLayoutRowTuple = RECORD
-      MinY       : Single;
-      Height     : Single;
-      Definition : TGridLayoutRowDefinition
-    END;
-
   PRIVATE
     FItems     : TGridLayoutItemCollection; // TObjectList<TGridLayoutItem>;
     FRowDef    : TGridlayoutRowCollection;    // TObjectList<TGridLayoutRowDefinition>;
     FColumnDef : TGridLayoutColumnCollection; // TObjectList<TGridLayoutColumnDefinition>;
+    FAlgorithm : TGridLayoutAlgorithm;
 
     // We need at least one definition
     // The last definition is always a filler with 1*
     FImplicitRowDef    : TGridLayoutRowDefinition;
     FImplicitColumnDef : TGridLayoutColumnDefinition;
-
-    // Calculated layout values
-    FColumns : TArray<TGridLayoutColumnTuple>;
-    FRows    : TArray<TGridLayoutRowTuple>;
-
-    FUNCTION ColumnWidthAtIndex (ColumnIndex : Integer) : Single;
-    FUNCTION RowHeightAtIndex   (RowIndex    : Integer) : Single;
 
     FUNCTION GetColumnCount () : Integer;
     FUNCTION GetRowCount    () : Integer;
@@ -192,6 +218,8 @@ TYPE
 
     PROPERTY  ColumnCount : Integer READ GetColumnCount;
     PROPERTY  RowCount    : Integer READ GetRowCount;
+
+    PROPERTY  Algorithm : TGridLayoutAlgorithm READ FAlgorithm;
 
   PUBLISHED
     PROPERTY Align;
@@ -477,6 +505,7 @@ BEGIN
   FItems     := TGridLayoutItemCollection.Create(self);
   FRowDef    := TGridlayoutRowCollection.Create(self);
   FColumnDef := TGridLayoutColumnCollection.Create(self);
+  FAlgorithm := TGridLayoutAlgorithm.Create(self);
 
   FImplicitRowDef    := FRowDef.Add AS TGridLayoutRowDefinition;
   FImplicitColumnDef := FColumnDef.Add AS TGridLayoutColumnDefinition;
@@ -496,6 +525,7 @@ BEGIN
   FreeAndNil(FItems);
   FreeAndNil(FRowDef);
   FreeAndNil(FColumnDef);
+  FreeAndNil(FAlgorithm);
 
   INHERITED;
 END;
@@ -660,82 +690,7 @@ BEGIN
   IF (FItems.Count > 0) OR (csDesigning IN ComponentState) THEN BEGIN
     AdjustClientRect(Rect);
 
-    SetLength(FColumns, FColumnDef.Count);
-    SetLength(FRows   , FRowDef.Count);
-
-    VAR SumNonStarWidth  : Single := 0.0;
-    VAR SumNonStarHeight : Single := 0.0;
-
-    // the sum of all sum factors in the column definitions
-    VAR SumStarFactorsHorizontal : Single := 0.0;
-    VAR SumStarFactorsVertical   : Single := 0.0;
-
-
-    // 1. pass - calculate row/column values for none star row/columns
-    FOR VAR C := 0 TO Length(FColumns)-1 DO BEGIN
-      VAR ColDef := FColumnDef.Items[C] AS TGridLayoutColumnDefinition;
-      VAR Width  := ColumnWidthAtIndex(C);
-
-      IF ColDef.FMode = gsmStar THEN BEGIN
-        SumStarFactorsHorizontal := SumStarFactorsHorizontal + Width;
-      END
-      ELSE BEGIN
-        SumNonStarWidth := SumNonStarWidth + Width;
-      END;
-
-      FColumns[c].Width := Width;
-      FColumns[c].Definition := colDef;
-    END;
-
-
-    FOR VAR R := 0 TO Length(FRows)-1 DO BEGIN
-      VAR RowDef := FRowDef.Items[R] AS TGridLayoutRowDefinition;
-      VAR Height := RowHeightAtIndex(R);
-
-      IF RowDef.FMode = gsmStar THEN BEGIN
-        SumStarFactorsVertical := SumStarFactorsVertical + Height;
-      END
-      ELSE BEGIN
-        SumNonStarHeight := SumNonStarHeight + Height;
-      END;
-
-      FRows[r].Height := Height;
-      FRows[r].Definition := rowDef;
-    END;
-
-    VAR StarWidthRemainder  := Rect.Width - SumNonStarWidth; // TODO ist Rect richtig?
-    VAR StarHeightRemainder := Rect.Height - SumNonStarHeight;
-
-
-    // 2. pass - calculate star fractions
-    // for columns
-    FOR VAR C := 0 TO Length(FColumns)-1 DO BEGIN
-
-      // calculate width for star
-      IF FColumns[C].Definition.FMode = gsmStar THEN BEGIN
-        FColumns[C].Width := (StarWidthRemainder / SumStarFactorsHorizontal) * FColumns[C].Definition.Width;
-      END;
-
-      // set minX
-      IF (C = 0)
-      THEN FColumns[C].MinX := 0
-      ELSE FColumns[C].MinX := FColumns[C-1].MinX + FColumns[C-1].Width;
-    END;
-
-    // and rows
-    FOR VAR R := 0 TO Length(FRows)-1 DO BEGIN
-
-      // calculate height for star
-      IF FRows[R].Definition.FMode = gsmStar THEN BEGIN
-        FRows[R].Height := (StarHeightRemainder / SumStarFactorsVertical) * FRows[R].Definition.Height;
-      END;
-
-       // set minY
-      IF (R = 0)
-      THEN FRows[R].MinY := 0
-      ELSE FRows[R].MinY := FRows[R-1].MinY + FRows[R-1].Height;
-    END;
-
+    FAlgorithm.Calculate(Rect);
 
     // 3. pass - enum all items and set frames
     FOR VAR I := 0 TO FItems.Count-1 DO BEGIN
@@ -759,24 +714,7 @@ BEGIN
 
       // TODO Align, Margin
       // Set Control Bounds
-      VAR CtrlBounds  := Default(TRect);
-      CtrlBounds.Top  := Trunc(FRows[Item.Row].MinY);
-      CtrlBounds.Left := Trunc(FColumns[Item.Column].MinX);
-
-      IF FColumns[Item.Column].Definition.FMode = gsmAutosize THEN BEGIN
-        CtrlBounds.Width := Item.Control.BoundsRect.Width;
-      END
-      ELSE BEGIN
-        CtrlBounds.Width := Trunc(FColumns[Item.Column].Width);
-      END;
-
-      IF FRows[Item.Row].Definition.FMode = gsmAutoSize THEN BEGIN
-        CtrlBounds.Height := Item.Control.BoundsRect.Height;
-      END
-      ELSE BEGIN
-        CtrlBounds.Height := Trunc(FRows[Item.Row].Height);
-      END;
-
+      VAR CtrlBounds  := FAlgorithm.ControlRect(Item.Row, Item.Column, Item.Control.BoundsRect);
       Item.Control.BoundsRect := CtrlBounds;
     END;
 
@@ -795,8 +733,8 @@ BEGIN
 
   Result := -1;
 
-  FOR VAR I := 0 TO Length(FColumns)-1 DO BEGIN
-    VAR Col := FColumns[I];
+  FOR VAR I := 0 TO FAlgorithm.ColumnCount-1 DO BEGIN
+    VAR Col := FAlgorithm.Columns[I];
     IF InRange(Position.X, Col.MinX, Col.MinX + Col.Width) THEN BEGIN
       EXIT(I);
     END;
@@ -810,61 +748,11 @@ BEGIN
 
   Result := -1;
 
-  FOR VAR I := 0 TO Length(FRows)-1 DO BEGIN
-    VAR Row := FRows[I];
+  FOR VAR I := 0 TO FAlgorithm.RowCount-1 DO BEGIN
+    VAR Row := FAlgorithm.Rows[I];
     IF InRange(Position.Y, Row.MinY, Row.MinY + Row.Height) THEN BEGIN
       EXIT(I);
     END;
-  END;
-END;
-
-
-
-FUNCTION TGridLayout.ColumnWidthAtIndex(ColumnIndex: Integer): Single;
-BEGIN
-  VAR ColDef := FColumnDef.Items[ColumnIndex] AS TGridLayoutColumnDefinition;
-
-  IF (ColDef.FMode = gsmAutosize) THEN BEGIN
-    // find widest view in column
-    VAR MaxWidth := 0.0;
-
-    FOR VAR Item IN FItems DO BEGIN
-      WITH Item AS TGridLayoutItem DO BEGIN
-        IF (Column = ColumnIndex) THEN BEGIN
-          MaxWidth := Max(Control.Width, MaxWidth);
-        END;
-      END;
-    END;
-
-    Result := MaxWidth;
-  END
-  ELSE BEGIN
-    Result := ColDef.Width;
-  END;
-END;
-
-
-
-FUNCTION TGridLayout.RowHeightAtIndex(RowIndex: Integer): Single;
-BEGIN
-  VAR RowDef := FRowDef.Items[RowIndex] AS TGridLayoutRowDefinition;
-
-  IF (RowDef.FMode = gsmAutosize) THEN BEGIN
-    // find tallest view in row
-    VAR MaxHeight := 0.0;
-
-    FOR VAR Item IN FItems DO BEGIN
-      WITH Item AS TGridLayoutItem DO BEGIN
-        IF (Row = RowIndex) THEN BEGIN
-          MaxHeight := Max(Control.Height, MaxHeight);
-        END;
-      END;
-    END;
-
-    Result := MaxHeight;
-  END
-  ELSE BEGIN
-    Result := rowDef.Height;
   END;
 END;
 
@@ -892,10 +780,10 @@ BEGIN
     // If Row/Col Size is 0 pmXor deletes the old line  => Max(1, size)
 
     // Rows
-    FOR VAR Loop := 0 TO Length(FRows)-1 DO BEGIN
-      VAR Row := FRows[Loop];
+    FOR VAR Loop := 0 TO FAlgorithm.RowCount-1 DO BEGIN
+      VAR Row := FAlgorithm.Rows[Loop];
 
-      IF (Loop < Length(FRows)-1) OR (Row.Definition.Mode <> gsmStar) THEN BEGIN
+      IF (Loop < FAlgorithm.RowCount-1) OR (Row.Definition.Mode <> gsmStar) THEN BEGIN
         VAR MaxY := Trunc(Row.MinY + Max(1, Row.Height));
 
         Canvas.MoveTo(0 , MaxY);
@@ -906,10 +794,10 @@ BEGIN
     END;
 
     // Columns
-    FOR VAR Loop := 0 TO Length(FColumns)-1 DO BEGIN
-      VAR Col := FColumns[Loop];
+    FOR VAR Loop := 0 TO FAlgorithm.ColumnCount-1 DO BEGIN
+      VAR Col := FAlgorithm.Columns[Loop];
 
-      IF (Loop < Length(FColumns)-1) OR (Col.Definition.Mode <> gsmStar) THEN BEGIN
+      IF (Loop < FAlgorithm.ColumnCount-1) OR (Col.Definition.Mode <> gsmStar) THEN BEGIN
         VAR MaxX := Trunc(Col.MinX + Max(1, Col.Width));
 
         Canvas.MoveTo(MaxX, 0);
@@ -939,5 +827,193 @@ BEGIN
     END;
   END;
 END;
+
+{ TGridLayoutAlgorithm }
+
+
+CONSTRUCTOR TGridLayoutAlgorithm.Create(ParentLayout: TGridLayout);
+BEGIN
+  FParentLayout := ParentLayout;
+END;
+
+
+PROCEDURE TGridLayoutAlgorithm.Calculate(ClientRect: TRect);
+BEGIN
+  SetLength(FColumns, FParentLayout.FColumnDef.Count);
+  SetLength(FRows   , FParentLayout.FRowDef.Count);
+
+  VAR SumNonStarWidth  : Single := 0.0;
+  VAR SumNonStarHeight : Single := 0.0;
+
+  // the sum of all sum factors in the column definitions
+  VAR SumStarFactorsHorizontal : Single := 0.0;
+  VAR SumStarFactorsVertical   : Single := 0.0;
+
+
+  // 1. pass - calculate row/column values for none star row/columns
+  FOR VAR C := 0 TO Length(FColumns)-1 DO BEGIN
+    VAR ColDef := FParentLayout.FColumnDef.Items[C] AS TGridLayoutColumnDefinition;
+    VAR Width  := ColumnWidthAtIndex(C);
+
+    IF ColDef.FMode = gsmStar THEN BEGIN
+      SumStarFactorsHorizontal := SumStarFactorsHorizontal + Width;
+    END
+    ELSE BEGIN
+      SumNonStarWidth := SumNonStarWidth + Width;
+    END;
+
+    FColumns[c].Width := Width;
+    FColumns[c].Definition := colDef;
+  END;
+
+
+  FOR VAR R := 0 TO Length(FRows)-1 DO BEGIN
+    VAR RowDef := FParentLayout.FRowDef.Items[R] AS TGridLayoutRowDefinition;
+    VAR Height := RowHeightAtIndex(R);
+
+    IF RowDef.FMode = gsmStar THEN BEGIN
+      SumStarFactorsVertical := SumStarFactorsVertical + Height;
+    END
+    ELSE BEGIN
+      SumNonStarHeight := SumNonStarHeight + Height;
+    END;
+
+    FRows[r].Height := Height;
+    FRows[r].Definition := rowDef;
+  END;
+
+  VAR StarWidthRemainder  := ClientRect.Width - SumNonStarWidth; // TODO ist Rect richtig?
+  VAR StarHeightRemainder := ClientRect.Height - SumNonStarHeight;
+
+
+  // 2. pass - calculate star fractions
+  // for columns
+  FOR VAR C := 0 TO Length(FColumns)-1 DO BEGIN
+
+    // calculate width for star
+    IF FColumns[C].Definition.FMode = gsmStar THEN BEGIN
+      FColumns[C].Width := (StarWidthRemainder / SumStarFactorsHorizontal) * FColumns[C].Definition.Width;
+    END;
+
+    // set minX
+    IF (C = 0)
+    THEN FColumns[C].MinX := 0
+    ELSE FColumns[C].MinX := FColumns[C-1].MinX + FColumns[C-1].Width;
+  END;
+
+  // and rows
+  FOR VAR R := 0 TO Length(FRows)-1 DO BEGIN
+
+    // calculate height for star
+    IF FRows[R].Definition.FMode = gsmStar THEN BEGIN
+      FRows[R].Height := (StarHeightRemainder / SumStarFactorsVertical) * FRows[R].Definition.Height;
+    END;
+
+     // set minY
+    IF (R = 0)
+    THEN FRows[R].MinY := 0
+    ELSE FRows[R].MinY := FRows[R-1].MinY + FRows[R-1].Height;
+  END;
+END;
+
+
+FUNCTION TGridLayoutAlgorithm.ControlRect(Row, Column : INTEGER; BoundsRect : TRect): TRect;
+BEGIN
+  Column := EnsureRange(Column, 0, Length(FColumns)-1);
+  Row    := EnsureRange(Row, 0, Length(FRows));
+
+  Result := Default(TRect);
+  Result.Top  := Trunc(FRows[Row].MinY);
+  Result.Left := Trunc(FColumns[Column].MinX);
+
+  IF FColumns[Column].Definition.FMode = gsmAutosize THEN BEGIN
+    Result.Width := BoundsRect.Width;
+  END
+  ELSE BEGIN
+    Result.Width := Trunc(FColumns[Column].Width);
+  END;
+
+  IF FRows[Row].Definition.FMode = gsmAutoSize THEN BEGIN
+    Result.Height := BoundsRect.Height;
+  END
+  ELSE BEGIN
+    Result.Height := Trunc(FRows[Row].Height);
+  END;
+END;
+
+
+FUNCTION TGridLayoutAlgorithm.ColumnWidthAtIndex(ColumnIndex: Integer): Single;
+BEGIN
+  VAR ColDef := FParentLayout.FColumnDef.Items[ColumnIndex] AS TGridLayoutColumnDefinition;
+
+  IF (ColDef.FMode = gsmAutosize) THEN BEGIN
+    // find widest view in column
+    VAR MaxWidth := 0.0;
+
+    FOR VAR Item IN FParentLayout.FItems DO BEGIN
+      WITH Item AS TGridLayoutItem DO BEGIN
+        IF (Column = ColumnIndex) THEN BEGIN
+          MaxWidth := Max(Control.Width, MaxWidth);
+        END;
+      END;
+    END;
+
+    Result := MaxWidth;
+  END
+  ELSE BEGIN
+    Result := ColDef.Width;
+  END;
+END;
+
+
+
+FUNCTION TGridLayoutAlgorithm.RowHeightAtIndex(RowIndex: Integer): Single;
+BEGIN
+  VAR RowDef := FParentLayout.FRowDef.Items[RowIndex] AS TGridLayoutRowDefinition;
+
+  IF (RowDef.FMode = gsmAutosize) THEN BEGIN
+    // find tallest view in row
+    VAR MaxHeight := 0.0;
+
+    FOR VAR Item IN FParentLayout.FItems DO BEGIN
+      WITH Item AS TGridLayoutItem DO BEGIN
+        IF (Row = RowIndex) THEN BEGIN
+          MaxHeight := Max(Control.Height, MaxHeight);
+        END;
+      END;
+    END;
+
+    Result := MaxHeight;
+  END
+  ELSE BEGIN
+    Result := rowDef.Height;
+  END;
+END;
+
+
+FUNCTION TGridLayoutAlgorithm.GetColumnCount: INTEGER;
+BEGIN
+  Result := Length(FColumns);
+END;
+
+
+FUNCTION TGridLayoutAlgorithm.GetRowCount: INTEGER;
+BEGIN
+  Result := Length(FRows);
+END;
+
+
+FUNCTION TGridLayoutAlgorithm.GetColumn(Index: INTEGER): TGridLayoutColumnTuple;
+BEGIN
+  Result := FColumns[Index];
+END;
+
+
+FUNCTION TGridLayoutAlgorithm.GetRow(Index: INTEGER): TGridLayoutRowTuple;
+BEGIN
+  Result := FRows[Index];
+END;
+
+
 
 END.

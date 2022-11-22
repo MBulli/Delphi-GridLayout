@@ -9,6 +9,9 @@
         <Projects Include="GridLayoutTest.dproj">
             <Dependencies>Package2.dproj</Dependencies>
         </Projects>
+        <Projects Include="Tests\GridLayoutTestProject.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -35,14 +38,23 @@
     <Target Name="GridLayoutTest:Make" DependsOnTargets="Package2:Make">
         <MSBuild Projects="GridLayoutTest.dproj" Targets="Make"/>
     </Target>
+    <Target Name="GridLayoutTestProject">
+        <MSBuild Projects="Tests\GridLayoutTestProject.dproj"/>
+    </Target>
+    <Target Name="GridLayoutTestProject:Clean">
+        <MSBuild Projects="Tests\GridLayoutTestProject.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="GridLayoutTestProject:Make">
+        <MSBuild Projects="Tests\GridLayoutTestProject.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Package2;GridLayoutTest"/>
+        <CallTarget Targets="Package2;GridLayoutTest;GridLayoutTestProject"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Package2:Clean;GridLayoutTest:Clean"/>
+        <CallTarget Targets="Package2:Clean;GridLayoutTest:Clean;GridLayoutTestProject:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Package2:Make;GridLayoutTest:Make"/>
+        <CallTarget Targets="Package2:Make;GridLayoutTest:Make;GridLayoutTestProject:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

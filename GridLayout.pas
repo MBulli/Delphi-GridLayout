@@ -188,8 +188,8 @@ TYPE
     CONSTRUCTOR Create(AOwner: TComponent); OVERRIDE;
     DESTRUCTOR  Destroy();                  OVERRIDE;
 
-    PROCEDURE AddColumn(Mode : TGridLayoutSizeMode; Factor : Single);
-    PROCEDURE AddRow   (Mode : TGridLayoutSizeMode; Factor : Single);
+    PROCEDURE AddColumn(AMode : TGridLayoutSizeMode; AFactor : Single);
+    PROCEDURE AddRow   (AMode : TGridLayoutSizeMode; AFactor : Single);
 
     PROCEDURE AddItem(Control : TControl;
                       Row     : Integer;
@@ -553,29 +553,29 @@ BEGIN
 END;
 
 
-PROCEDURE TGridLayout.AddColumn(Mode: TGridLayoutSizeMode; Factor: Single);
+PROCEDURE TGridLayout.AddColumn(AMode: TGridLayoutSizeMode; AFactor: Single);
 BEGIN
   WITH FColumnDef.Add AS TGridLayoutColumnDefinition DO BEGIN
-    FMode := Mode;
+    FMode := AMode;
 
-    CASE Mode OF
+    CASE AMode OF
       gsmAutosize : FFactor := 0;
-      gsmStar     : FFactor := Factor;
-      gsmPixels   : FFactor := Trunc(Factor);
+      gsmStar     : FFactor := AFactor;
+      gsmPixels   : FFactor := Trunc(AFactor);
     END;
   END;
 END;
 
 
-PROCEDURE TGridLayout.AddRow(Mode: TGridLayoutSizeMode; Factor: Single);
+PROCEDURE TGridLayout.AddRow(AMode: TGridLayoutSizeMode; AFactor: Single);
 BEGIN
   WITH FRowDef.Add AS TGridLayoutRowDefinition DO BEGIN
-    FMode := Mode;
+    FMode := AMode;
 
-    CASE Mode OF
+    CASE AMode OF
       gsmAutosize : FFactor := 0;
-      gsmStar     : FFactor := Factor;
-      gsmPixels   : FFactor := Trunc(Factor);
+      gsmStar     : FFactor := AFactor;
+      gsmPixels   : FFactor := Trunc(AFactor);
     END;
   END;
 END;

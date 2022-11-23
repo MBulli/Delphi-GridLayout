@@ -822,6 +822,32 @@ BEGIN
   SetLength(FColumns, FParentLayout.FColumnDef.Count);
   SetLength(FRows   , FParentLayout.FRowDef.Count);
 
+  VAR SkipColumns := FALSE;
+  VAR SkipRows    := FALSE;
+
+  // Special cases:
+  // No columns
+  IF Length(FColumns) = 0 THEN BEGIN
+    SetLength(FColumns, 1);
+    FColumns[0].MinX       := 0;
+    FColumns[0].Width      := ClientRect.Width;
+    FColumns[0].Definition := NIL;
+    SkipColumns := TRUE;
+  END;
+
+  // No rows
+  IF Length(FRows) = 0 THEN BEGIN
+    SetLength(FRows, 1);
+    FRows[0].MinY       := 0;
+    FRows[0].Height     := ClientRect.Height;
+    FRows[0].Definition := NIL;
+    SkipRows := TRUE;
+  END;
+
+  // Early exit if there are now user definied columns and rows
+  IF SkipColumns AND SkipRows THEN EXIT;
+
+  // Space taken by non-star columns and rows
   VAR SumNonStarWidth  : Single := 0.0;
   VAR SumNonStarHeight : Single := 0.0;
 
@@ -831,35 +857,38 @@ BEGIN
 
 
   // 1. pass - calculate row/column values for none star row/columns
-  FOR VAR C := 0 TO Length(FColumns)-1 DO BEGIN
-    VAR ColDef := FParentLayout.FColumnDef.Items[C] AS TGridLayoutColumnDefinition;
-    VAR Width  := ColumnWidthAtIndex(C);
+  IF NOT SkipColumns THEN BEGIN
+    FOR VAR C := 0 TO Length(FColumns)-1 DO BEGIN
+      VAR ColDef := FParentLayout.FColumnDef.Items[C] AS TGridLayoutColumnDefinition;
+      VAR Width  := ColumnWidthAtIndex(C);
 
-    IF ColDef.FMode = gsmStar THEN BEGIN
-      SumStarFactorsHorizontal := SumStarFactorsHorizontal + Width;
-    END
-    ELSE BEGIN
-      SumNonStarWidth := SumNonStarWidth + Width;
+      IF ColDef.FMode = gsmStar THEN BEGIN
+        SumStarFactorsHorizontal := SumStarFactorsHorizontal + Width;
+      END
+      ELSE BEGIN
+        SumNonStarWidth := SumNonStarWidth + Width;
+      END;
+
+      FColumns[c].Width := Width;
+      FColumns[c].Definition := colDef;
     END;
-
-    FColumns[c].Width := Width;
-    FColumns[c].Definition := colDef;
   END;
 
+  IF NOT SkipRows THEN BEGIN
+    FOR VAR R := 0 TO Length(FRows)-1 DO BEGIN
+      VAR RowDef := FParentLayout.FRowDef.Items[R] AS TGridLayoutRowDefinition;
+      VAR Height := RowHeightAtIndex(R);
 
-  FOR VAR R := 0 TO Length(FRows)-1 DO BEGIN
-    VAR RowDef := FParentLayout.FRowDef.Items[R] AS TGridLayoutRowDefinition;
-    VAR Height := RowHeightAtIndex(R);
+      IF RowDef.FMode = gsmStar THEN BEGIN
+        SumStarFactorsVertical := SumStarFactorsVertical + Height;
+      END
+      ELSE BEGIN
+        SumNonStarHeight := SumNonStarHeight + Height;
+      END;
 
-    IF RowDef.FMode = gsmStar THEN BEGIN
-      SumStarFactorsVertical := SumStarFactorsVertical + Height;
-    END
-    ELSE BEGIN
-      SumNonStarHeight := SumNonStarHeight + Height;
+      FRows[r].Height := Height;
+      FRows[r].Definition := rowDef;
     END;
-
-    FRows[r].Height := Height;
-    FRows[r].Definition := rowDef;
   END;
 
   VAR StarWidthRemainder  := ClientRect.Width - SumNonStarWidth; // TODO ist Rect richtig?
@@ -868,52 +897,63 @@ BEGIN
 
   // 2. pass - calculate star fractions
   // for columns
-  FOR VAR C := 0 TO Length(FColumns)-1 DO BEGIN
+  IF NOT SkipColumns THEN BEGIN
+    FOR VAR C := 0 TO Length(FColumns)-1 DO BEGIN
 
-    // calculate width for star
-    IF FColumns[C].Definition.FMode = gsmStar THEN BEGIN
-      FColumns[C].Width := (StarWidthRemainder / SumStarFactorsHorizontal) * FColumns[C].Definition.Width;
+      // calculate width for star
+      IF FColumns[C].Definition.FMode = gsmStar THEN BEGIN
+        FColumns[C].Width := (StarWidthRemainder / SumStarFactorsHorizontal) * FColumns[C].Definition.Width;
+      END;
+
+      // set minX
+      IF (C = 0)
+      THEN FColumns[C].MinX := 0
+      ELSE FColumns[C].MinX := FColumns[C-1].MinX + FColumns[C-1].Width;
     END;
-
-    // set minX
-    IF (C = 0)
-    THEN FColumns[C].MinX := 0
-    ELSE FColumns[C].MinX := FColumns[C-1].MinX + FColumns[C-1].Width;
   END;
 
   // and rows
-  FOR VAR R := 0 TO Length(FRows)-1 DO BEGIN
+  IF NOT SkipRows THEN BEGIN
+    FOR VAR R := 0 TO Length(FRows)-1 DO BEGIN
 
-    // calculate height for star
-    IF FRows[R].Definition.FMode = gsmStar THEN BEGIN
-      FRows[R].Height := (StarHeightRemainder / SumStarFactorsVertical) * FRows[R].Definition.Height;
+      // calculate height for star
+      IF FRows[R].Definition.FMode = gsmStar THEN BEGIN
+        FRows[R].Height := (StarHeightRemainder / SumStarFactorsVertical) * FRows[R].Definition.Height;
+      END;
+
+       // set minY
+      IF (R = 0)
+      THEN FRows[R].MinY := 0
+      ELSE FRows[R].MinY := FRows[R-1].MinY + FRows[R-1].Height;
     END;
-
-     // set minY
-    IF (R = 0)
-    THEN FRows[R].MinY := 0
-    ELSE FRows[R].MinY := FRows[R-1].MinY + FRows[R-1].Height;
   END;
 END;
 
 
 FUNCTION TGridLayoutAlgorithm.ControlRect(Row, Column : INTEGER; BoundsRect : TRect): TRect;
+
+  FUNCTION _IsAutoSize(Def : TGridLayoutDefinitionBase) : BOOLEAN;  INLINE;
+  BEGIN
+    Result := (Def <> NIL) AND (Def.FMode = gsmAutosize);
+  END;
+
 BEGIN
+  // Clamp invalid indices to valid ones
   Column := EnsureRange(Column, 0, Length(FColumns)-1);
-  Row    := EnsureRange(Row, 0, Length(FRows));
+  Row    := EnsureRange(Row, 0, Length(FRows)-1);
 
   Result := Default(TRect);
   Result.Top  := Trunc(FRows[Row].MinY);
   Result.Left := Trunc(FColumns[Column].MinX);
 
-  IF FColumns[Column].Definition.FMode = gsmAutosize THEN BEGIN
+  IF _IsAutoSize(FColumns[Column].Definition) THEN BEGIN
     Result.Width := BoundsRect.Width;
   END
   ELSE BEGIN
     Result.Width := Trunc(FColumns[Column].Width);
   END;
 
-  IF FRows[Row].Definition.FMode = gsmAutoSize THEN BEGIN
+  IF _IsAutoSize(FRows[Row].Definition) THEN BEGIN
     Result.Height := BoundsRect.Height;
   END
   ELSE BEGIN

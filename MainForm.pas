@@ -20,6 +20,14 @@ type
     Button3: TButton;
     GridLayout2: TGridLayout;
     Button5: TButton;
+    Button6: TButton;
+    Button7: TButton;
+    Button8: TButton;
+    Button9: TButton;
+    Button10: TButton;
+    Button11: TButton;
+    Button12: TButton;
+    Button13: TButton;
     procedure FormCreate(Sender: TObject);
   private
     { Private declarations }

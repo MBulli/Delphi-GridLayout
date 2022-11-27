@@ -26,6 +26,13 @@ TYPE
     [Test]
     PROCEDURE TestOneColumnOneRow;
 
+
+    [Test]
+    PROCEDURE TestColumnGap;
+
+    [Test]
+    PROCEDURE TestRowGap;
+
   END;
 
 IMPLEMENTATION
@@ -43,7 +50,26 @@ BEGIN
   END;
 END;
 
+
+FUNCTION RectLTRB(CONST Left, Top, Right, Bottom : INTEGER) : TRect; INLINE;
+BEGIN
+  Result.Left   := Left;
+  Result.Top    := Top;
+  Result.Right  := Right;
+  Result.Bottom := Bottom;
+END;
+
+
+FUNCTION RectLTWH(CONST Left, Top, Width, Height : INTEGER) : TRect; INLINE;
+BEGIN
+  Result.Left   := Left;
+  Result.Top    := Top;
+  Result.Width  := Width;
+  Result.Height := Height;
+END;
+
 { TGridLayoutAlgorithmTests }
+
 
 PROCEDURE TGridLayoutAlgorithmTests.TestNoColumnNoRow;
 BEGIN
@@ -133,6 +159,58 @@ BEGIN
   AssertRectEqual(ExpectedRect, R01);
   AssertRectEqual(ExpectedRect, R11);
   AssertRectEqual(ExpectedRect, R10);
+END;
+
+
+PROCEDURE TGridLayoutAlgorithmTests.TestColumnGap;
+BEGIN
+  VAR LayoutBounds := Rect(0,0,100,100);
+  VAR RandomRect   := Rect(42,1337,512,1024);
+  VAR ExpectedRect := Rect(0,0,30,25);
+
+  VAR GL := TGridLayout.Create(NIL);
+
+  GL.AddColumn(gsmPixels, 20);
+  GL.AddColumn(gsmPixels, 20);
+  GL.AddColumn(gsmPixels, 20);
+
+  GL.ColumnGap := 10;
+
+  GL.Algorithm.Calculate(LayoutBounds);
+
+  VAR R00 := GL.Algorithm.ControlRect(0,0,RandomRect);
+  VAR R01 := GL.Algorithm.ControlRect(0,1,RandomRect);
+  VAR R02 := GL.Algorithm.ControlRect(0,2,RandomRect);
+
+  AssertRectEqual(RectLTWH( 0, 0, 20, 100), R00);
+  AssertRectEqual(RectLTWH(30, 0, 20, 100), R01);
+  AssertRectEqual(RectLTWH(60, 0, 20, 100), R02);
+END;
+
+
+PROCEDURE TGridLayoutAlgorithmTests.TestRowGap;
+BEGIN
+  VAR LayoutBounds := Rect(0,0,100,100);
+  VAR RandomRect   := Rect(42,1337,512,1024);
+  VAR ExpectedRect := Rect(0,0,30,25);
+
+  VAR GL := TGridLayout.Create(NIL);
+
+  GL.AddRow(gsmPixels, 20);
+  GL.AddRow(gsmPixels, 20);
+  GL.AddRow(gsmPixels, 20);
+
+  GL.RowGap := 10;
+
+  GL.Algorithm.Calculate(LayoutBounds);
+
+  VAR R00 := GL.Algorithm.ControlRect(0,0,RandomRect);
+  VAR R10 := GL.Algorithm.ControlRect(1,0,RandomRect);
+  VAR R20 := GL.Algorithm.ControlRect(2,0,RandomRect);
+
+  AssertRectEqual(RectLTWH( 0,  0, 100, 20), R00);
+  AssertRectEqual(RectLTWH( 0, 30, 100, 20), R10);
+  AssertRectEqual(RectLTWH( 0, 60, 100, 20), R20);
 END;
 
 INITIALIZATION

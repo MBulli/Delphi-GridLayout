@@ -170,8 +170,14 @@ TYPE
     FColumnDef : TGridLayoutColumnCollection; // TObjectList<TGridLayoutColumnDefinition>;
     FAlgorithm : TGridLayoutAlgorithm;
 
+    FColumnGap : INTEGER;
+    FRowGap    : INTEGER;
+
     FUNCTION GetColumnCount () : Integer;
     FUNCTION GetRowCount    () : Integer;
+
+    PROCEDURE SetColumnGap(CONST NewValue : INTEGER);
+    PROCEDURE SetRowGap   (CONST NewValue : INTEGER);
 
     PROCEDURE SetColumnDefinitionCollection(CONST AValue : TGridLayoutColumnCollection);
     PROCEDURE SetRowDefinitionCollection   (CONST AValue : TGridlayoutRowCollection);
@@ -222,6 +228,9 @@ TYPE
     PROPERTY ColumnDefinition : TGridLayoutColumnCollection READ FColumnDef WRITE SetColumnDefinitionCollection;   // TODO Missing s for ColumnDefinition
     PROPERTY RowDefinitions   : TGridLayoutRowCollection    READ FRowDef    WRITE SetRowDefinitionCollection;
     PROPERTY Items            : TGridLayoutItemCollection   READ FItems     WRITE SetItemCollection;
+
+    PROPERTY ColumnGap : INTEGER READ FColumnGap WRITE SetColumnGap DEFAULT 0;
+    PROPERTY RowGap    : INTEGER READ FRowGap    WRITE SetRowGap    DEFAULT 0;
   END;
 
 IMPLEMENTATION
@@ -612,9 +621,31 @@ BEGIN
 END;
 
 
+PROCEDURE TGridLayout.SetColumnGap(CONST NewValue: INTEGER);
+BEGIN
+  IF NewValue < 0 THEN RAISE Exception.CreateFmt('Invalid column gap value "%d".', [NewValue]);
+
+  IF FColumnGap <> NewValue THEN BEGIN
+    FColumnGap := NewValue;
+    Realign;
+  END;
+END;
+
+
 PROCEDURE TGridLayout.SetRowDefinitionCollection(CONST AValue: TGridlayoutRowCollection);
 BEGIN
   FRowDef.Assign(AValue);
+END;
+
+
+PROCEDURE TGridLayout.SetRowGap(CONST NewValue: INTEGER);
+BEGIN
+  IF NewValue < 0 THEN RAISE Exception.CreateFmt('Invalid row gap value "%d".', [NewValue]);
+
+  IF FRowGap <> NewValue THEN BEGIN
+    FRowGap := NewValue;
+    Realign;
+  END;
 END;
 
 
@@ -764,7 +795,7 @@ BEGIN
       VAR Row := FAlgorithm.Rows[Loop];
 
       IF (Loop < FAlgorithm.RowCount-1) OR (Row.Definition.Mode <> gsmStar) THEN BEGIN
-        VAR MaxY := Trunc(Row.MinY + Max(1, Row.Height));
+        VAR MaxY := Trunc(Row.MinY + Max(1, Row.Height) + FRowGap/2);
 
         Canvas.MoveTo(0 , MaxY);
         Canvas.LineTo(ClientWidth, MaxY);
@@ -778,7 +809,7 @@ BEGIN
       VAR Col := FAlgorithm.Columns[Loop];
 
       IF (Loop < FAlgorithm.ColumnCount-1) OR (Col.Definition.Mode <> gsmStar) THEN BEGIN
-        VAR MaxX := Trunc(Col.MinX + Max(1, Col.Width));
+        VAR MaxX := Trunc(Col.MinX + Max(1, Col.Width) + FColumnGap/2);
 
         Canvas.MoveTo(MaxX, 0);
         Canvas.LineTo(MaxX, ClientHeight);
@@ -895,6 +926,9 @@ BEGIN
   VAR StarHeightRemainder := ClientRect.Height - SumNonStarHeight;
 
 
+  VAR ColumnGap := Max(0, Self.FParentLayout.FColumnGap);
+  VAR RowGap    := Max(0, Self.FParentLayout.FRowGap);
+
   // 2. pass - calculate star fractions
   // for columns
   IF NOT SkipColumns THEN BEGIN
@@ -908,7 +942,7 @@ BEGIN
       // set minX
       IF (C = 0)
       THEN FColumns[C].MinX := 0
-      ELSE FColumns[C].MinX := FColumns[C-1].MinX + FColumns[C-1].Width;
+      ELSE FColumns[C].MinX := FColumns[C-1].MinX + FColumns[C-1].Width + ColumnGap;
     END;
   END;
 
@@ -924,7 +958,7 @@ BEGIN
        // set minY
       IF (R = 0)
       THEN FRows[R].MinY := 0
-      ELSE FRows[R].MinY := FRows[R-1].MinY + FRows[R-1].Height;
+      ELSE FRows[R].MinY := FRows[R-1].MinY + FRows[R-1].Height + RowGap;
     END;
   END;
 END;

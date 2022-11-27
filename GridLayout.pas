@@ -791,31 +791,25 @@ BEGIN
     // If Row/Col Size is 0 pmXor deletes the old line  => Max(1, size)
 
     // Rows
-    FOR VAR Loop := 0 TO FAlgorithm.RowCount-1 DO BEGIN
+    FOR VAR Loop := 0 TO FAlgorithm.RowCount-2 DO BEGIN
       VAR Row := FAlgorithm.Rows[Loop];
+      VAR MaxY := Trunc(Row.MinY + Max(1, Row.Height) + FRowGap/2);
 
-      IF (Loop < FAlgorithm.RowCount-1) OR (Row.Definition.Mode <> gsmStar) THEN BEGIN
-        VAR MaxY := Trunc(Row.MinY + Max(1, Row.Height) + FRowGap/2);
+      Canvas.MoveTo(0 , MaxY);
+      Canvas.LineTo(ClientWidth, MaxY);
 
-        Canvas.MoveTo(0 , MaxY);
-        Canvas.LineTo(ClientWidth, MaxY);
-
-        RowOutOfBounds := MaxY > ClientHeight;
-      END;
+      RowOutOfBounds := MaxY > ClientHeight;
     END;
 
     // Columns
-    FOR VAR Loop := 0 TO FAlgorithm.ColumnCount-1 DO BEGIN
+    FOR VAR Loop := 0 TO FAlgorithm.ColumnCount-2 DO BEGIN
       VAR Col := FAlgorithm.Columns[Loop];
+      VAR MaxX := Trunc(Col.MinX + Max(1, Col.Width) + FColumnGap/2);
 
-      IF (Loop < FAlgorithm.ColumnCount-1) OR (Col.Definition.Mode <> gsmStar) THEN BEGIN
-        VAR MaxX := Trunc(Col.MinX + Max(1, Col.Width) + FColumnGap/2);
+      Canvas.MoveTo(MaxX, 0);
+      Canvas.LineTo(MaxX, ClientHeight);
 
-        Canvas.MoveTo(MaxX, 0);
-        Canvas.LineTo(MaxX, ClientHeight);
-
-        ColOutOfBounds := MaxX > ClientWidth;
-      END;
+      ColOutOfBounds := MaxX > ClientWidth;
     END;
 
     // Highlight edge if some row or column is out of bounds

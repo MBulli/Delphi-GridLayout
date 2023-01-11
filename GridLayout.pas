@@ -115,11 +115,11 @@ TYPE
     FUNCTION OwningLayout : TGridLayout;
 
   PUBLISHED
-    PROPERTY Control    : TControl READ FControl    WRITE SetControl;
-    PROPERTY Column     : Integer  READ FColumn     WRITE SetColumn;
-    PROPERTY Row        : Integer  READ FRow        WRITE SetRow;
-    PROPERTY ColumnSpan : Integer  READ FColumnSpan WRITE SetColumnSpan;
-    PROPERTY RowSpan    : Integer  READ FRowSpan    WRITE SetRowSpan;
+    PROPERTY Control    : TControl READ FControl    WRITE SetControl     DEFAULT NIL;
+    PROPERTY Column     : Integer  READ FColumn     WRITE SetColumn      DEFAULT 0;
+    PROPERTY Row        : Integer  READ FRow        WRITE SetRow         DEFAULT 0;
+    PROPERTY ColumnSpan : Integer  READ FColumnSpan WRITE SetColumnSpan  DEFAULT 1;
+    PROPERTY RowSpan    : Integer  READ FRowSpan    WRITE SetRowSpan     DEFAULT 1;
   END;
 
   TGridLayoutItemCollection = CLASS(TOwnedCollection)

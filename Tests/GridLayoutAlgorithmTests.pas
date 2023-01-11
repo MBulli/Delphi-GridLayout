@@ -26,6 +26,9 @@ TYPE
     [Test]
     PROCEDURE TestOneColumnOneRow;
 
+    [Test]
+    PROCEDURE TestMultiRow;
+
 
     [Test]
     PROCEDURE TestColumnGap;
@@ -159,6 +162,28 @@ BEGIN
   AssertRectEqual(ExpectedRect, R01);
   AssertRectEqual(ExpectedRect, R11);
   AssertRectEqual(ExpectedRect, R10);
+END;
+
+
+PROCEDURE TGridLayoutAlgorithmTests.TestMultiRow;
+BEGIN
+  VAR LayoutBounds := Rect(0,0,100,100);
+  VAR RandomRect   := Rect(42,1337,512,1024);
+
+  VAR GL := TGridLayout.Create(NIL);
+
+  // 1* 30px 31 5*
+  GL.AddRow(gsmStar  , 1);  // Space
+  GL.AddRow(gsmPixels, 28); // Row 1
+  GL.AddRow(gsmPixels, 32); // Row 2
+  GL.AddRow(gsmStar  , 5);  // Space
+
+  GL.Algorithm.Calculate(LayoutBounds);
+
+  AssertRectEqual(Rect(0, 0,100,  6), GL.Algorithm.ControlRect(0,0,RandomRect));  // Height = floor((100-32-28)/6) * 1
+  AssertRectEqual(Rect(0, 6,100, 34), GL.Algorithm.ControlRect(1,0,RandomRect));
+  AssertRectEqual(Rect(0,34,100, 66), GL.Algorithm.ControlRect(2,0,RandomRect));
+  AssertRectEqual(Rect(0,66,100, 99), GL.Algorithm.ControlRect(3,0,RandomRect));  // Height = floor((100-32-28)/6) * 5
 END;
 
 

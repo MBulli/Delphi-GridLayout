@@ -28,7 +28,6 @@ USES
  - RemoveCol/Row/Item methods
  - TComponent Editor
  - TextOut Values in Paint for Columns
- - Col/Row Span
  - MinWidth/MinHeigth
  - Add "Row/Column" fake properties to controls https://edn.embarcadero.com/article/33448
  - Row and Column names as optional alternative for indicies?
@@ -98,12 +97,14 @@ TYPE
     FColumn  : Integer;
     FRow     : Integer;
 
-//    FColumnSpan : Integer;
-//    FRowSpan    : Integer;
+    FColumnSpan : Integer;
+    FRowSpan    : Integer;
 
-    PROCEDURE SetControl(NewValue : TControl);
-    PROCEDURE SetColumn (NewValue : Integer);
-    PROCEDURE SetRow    (NewValue : Integer);
+    PROCEDURE SetControl   (NewValue : TControl);
+    PROCEDURE SetColumn    (NewValue : Integer);
+    PROCEDURE SetRow       (NewValue : Integer);
+    PROCEDURE SetColumnSpan(NewValue : Integer);
+    PROCEDURE SetRowSpan   (NewValue : Integer);
 
   PROTECTED
     FUNCTION GetDisplayName : STRING; OVERRIDE;
@@ -114,9 +115,11 @@ TYPE
     FUNCTION OwningLayout : TGridLayout;
 
   PUBLISHED
-    PROPERTY Control : TControl READ FControl WRITE SetControl;
-    PROPERTY Column  : Integer  READ FColumn  WRITE SetColumn;
-    PROPERTY Row     : Integer  READ FRow     WRITE SetRow;
+    PROPERTY Control    : TControl READ FControl    WRITE SetControl;
+    PROPERTY Column     : Integer  READ FColumn     WRITE SetColumn;
+    PROPERTY Row        : Integer  READ FRow        WRITE SetRow;
+    PROPERTY ColumnSpan : Integer  READ FColumnSpan WRITE SetColumnSpan;
+    PROPERTY RowSpan    : Integer  READ FRowSpan    WRITE SetRowSpan;
   END;
 
   TGridLayoutItemCollection = CLASS(TOwnedCollection)
@@ -162,7 +165,8 @@ TYPE
 
       PROCEDURE Calculate(ClientRect : TRect);
 
-      FUNCTION ControlRect(BoundsRect: TRect; Row, Column: Integer) : TRect;
+      FUNCTION ControlRect(BoundsRect: TRect; Row, Column: Integer) : TRect;    OVERLOAD;
+      FUNCTION ControlRect(BoundsRect: TRect; Row, Column, RowSpan, ColumnSpan: Integer) : TRect;    OVERLOAD;
 
       PROPERTY ColumnCount : INTEGER READ GetColumnCount;
       PROPERTY RowCount    : INTEGER READ GetRowCount;
@@ -339,9 +343,11 @@ CONSTRUCTOR TGridLayoutItem.Create(Collection: TCollection);
 BEGIN
   INHERITED Create(Collection);
 
-  FControl := nil;
-  FRow     := 0;
-  FColumn  := 0;
+  FControl    := nil;
+  FRow        := 0;
+  FColumn     := 0;
+  FRowSpan    := 1;
+  FColumnSpan := 1;
 END;
 
 
@@ -411,6 +417,15 @@ BEGIN
 END;
 
 
+PROCEDURE TGridLayoutItem.SetColumnSpan(NewValue: Integer);
+BEGIN
+  IF NewValue <> FColumnSpan THEN BEGIN
+    FColumnSpan := NewValue;
+    Changed(false);
+  END;
+END;
+
+
 PROCEDURE TGridLayoutItem.SetRow(NewValue: Integer);
 BEGIN
   IF NewValue <> FRow THEN BEGIN
@@ -419,6 +434,14 @@ BEGIN
   END;
 END;
 
+
+PROCEDURE TGridLayoutItem.SetRowSpan(NewValue: Integer);
+BEGIN
+  IF NewValue <> FRowSpan THEN BEGIN
+    FRowSpan := NewValue;
+    Changed(false);
+  END;
+END;
 
 PROCEDURE TGridLayoutItem.SetControl(NewValue: TControl);
 
@@ -744,7 +767,7 @@ BEGIN
 
       // TODO Align, Margin
       // Set Control Bounds
-      VAR CtrlBounds  := FAlgorithm.ControlRect(Item.Control.BoundsRect, Item.Row, Item.Column);
+      VAR CtrlBounds  := FAlgorithm.ControlRect(Item.Control.BoundsRect, Item.Row, Item.Column, Item.RowSpan, Item.ColumnSpan);
       Item.Control.BoundsRect := CtrlBounds;
     END;
 
@@ -977,7 +1000,13 @@ BEGIN
 END;
 
 
+
 FUNCTION TGridLayoutAlgorithm.ControlRect(BoundsRect : TRect; Row, Column : INTEGER): TRect;
+BEGIN
+  Result := ControlRect(BoundsRect, Row, Column, 1, 1);
+END;
+
+FUNCTION TGridLayoutAlgorithm.ControlRect(BoundsRect : TRect; Row, Column, RowSpan, ColumnSpan : INTEGER): TRect;
 
   FUNCTION _IsAutoSize(Def : TGridLayoutDefinitionBase) : BOOLEAN;  INLINE;
   BEGIN
@@ -988,24 +1017,40 @@ BEGIN
   // Clamp invalid indices to valid ones
   Column := EnsureRange(Column, 0, Length(FColumns)-1);
   Row    := EnsureRange(Row, 0, Length(FRows)-1);
+  ColumnSpan := EnsureRange(ColumnSpan, 1, Length(FColumns) - Column);
+  RowSpan    := EnsureRange(RowSpan   , 1, Length(FRows   ) - Row);
 
   Result := Default(TRect);
   Result.Top  := Trunc(FRows[Row].MinY);
   Result.Left := Trunc(FColumns[Column].MinX);
 
-  IF _IsAutoSize(FColumns[Column].Definition) THEN BEGIN
-    Result.Width := BoundsRect.Width;
-  END
-  ELSE BEGIN
-    Result.Width := Trunc(FColumns[Column].Width);
+  VAR Width : Single := 0.0;
+  FOR VAR ColumnIndex := Column TO Column + ColumnSpan - 1 DO BEGIN
+    Width := Width + FColumns[ColumnIndex].Width;
   END;
 
-  IF _IsAutoSize(FRows[Row].Definition) THEN BEGIN
-    Result.Height := BoundsRect.Height;
-  END
-  ELSE BEGIN
-    Result.Height := Trunc(FRows[Row].Height);
+  VAR Height : Single := 0.0;
+  FOR VAR RowIndex := Row TO Row + RowSpan - 1 DO BEGIN
+    Height := Height + FRows[RowIndex].Height;
   END;
+
+  Result.Width  := Trunc(Width);
+  Result.Height := Trunc(Height);
+
+
+//  IF _IsAutoSize(FColumns[Column].Definition) THEN BEGIN
+//    Result.Width := BoundsRect.Width;
+//  END
+//  ELSE BEGIN
+//    Result.Width := Trunc(FColumns[Column].Width);
+//  END;
+
+//  IF _IsAutoSize(FRows[Row].Definition) THEN BEGIN
+//    Result.Height := BoundsRect.Height;
+//  END
+//  ELSE BEGIN
+//    Result.Height := Trunc(FRows[Row].Height);
+//  END;
 END;
 
 

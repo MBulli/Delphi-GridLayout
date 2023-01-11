@@ -36,6 +36,15 @@ TYPE
     [Test]
     PROCEDURE TestRowGap;
 
+    [Test]
+    PROCEDURE TestInvalidColumnSpanValues;
+
+    [Test]
+    PROCEDURE TestInvalidRowSpanValues;
+
+    // TODO Col/Row-Span tests for basic function
+    // TODO Col/Row-Span tests for autosize row/cols
+
   END;
 
 IMPLEMENTATION
@@ -237,6 +246,58 @@ BEGIN
   AssertRectEqual(RectLTWH( 0, 30, 100, 20), R10);
   AssertRectEqual(RectLTWH( 0, 60, 100, 20), R20);
 END;
+
+
+PROCEDURE TGridLayoutAlgorithmTests.TestInvalidColumnSpanValues;
+BEGIN
+  VAR LayoutBounds := Rect(0,0,100,100);
+  VAR RandomRect   := Rect(42,1337,512,1024);
+  VAR ExpectedRect := Rect(0,0,30,25);
+
+  VAR GL := TGridLayout.Create(NIL);
+
+  GL.AddColumn(gsmPixels, 20);
+  GL.AddColumn(gsmPixels, 20);
+  GL.AddColumn(gsmPixels, 20);
+
+  GL.Algorithm.Calculate(LayoutBounds);
+
+  AssertRectEqual(RectLTWH( 0,  0, 20, 100), GL.Algorithm.ControlRect(RandomRect,0,0, 1,-1));
+  AssertRectEqual(RectLTWH( 0,  0, 20, 100), GL.Algorithm.ControlRect(RandomRect,0,0, 1,0));
+  AssertRectEqual(RectLTWH(20,  0, 20, 100), GL.Algorithm.ControlRect(RandomRect,0,1, 1,-1));
+  AssertRectEqual(RectLTWH(20,  0, 20, 100), GL.Algorithm.ControlRect(RandomRect,0,1, 1,0));
+
+  AssertRectEqual(RectLTWH( 0,  0, 60, 100), GL.Algorithm.ControlRect(RandomRect,0,0, 1,4));
+  AssertRectEqual(RectLTWH(20,  0, 40, 100), GL.Algorithm.ControlRect(RandomRect,0,1, 1,4));
+  AssertRectEqual(RectLTWH(40,  0, 20, 100), GL.Algorithm.ControlRect(RandomRect,0,2, 1,4));
+END;
+
+
+PROCEDURE TGridLayoutAlgorithmTests.TestInvalidRowSpanValues;
+BEGIN
+  VAR LayoutBounds := Rect(0,0,100,100);
+  VAR RandomRect   := Rect(42,1337,512,1024);
+  VAR ExpectedRect := Rect(0,0,30,25);
+
+  VAR GL := TGridLayout.Create(NIL);
+
+  GL.AddRow(gsmPixels, 20);
+  GL.AddRow(gsmPixels, 20);
+  GL.AddRow(gsmPixels, 20);
+
+  GL.Algorithm.Calculate(LayoutBounds);
+
+  AssertRectEqual(RectLTWH( 0,  0, 100, 20), GL.Algorithm.ControlRect(RandomRect,0,0, -1,1));
+  AssertRectEqual(RectLTWH( 0,  0, 100, 20), GL.Algorithm.ControlRect(RandomRect,0,0,  0,1));
+  AssertRectEqual(RectLTWH( 0, 20, 100, 20), GL.Algorithm.ControlRect(RandomRect,1,0, -1,1));
+  AssertRectEqual(RectLTWH( 0, 20, 100, 20), GL.Algorithm.ControlRect(RandomRect,1,0,  0,1));
+
+  AssertRectEqual(RectLTWH( 0,  0, 100, 60), GL.Algorithm.ControlRect(RandomRect,0,0, 4,1));
+  AssertRectEqual(RectLTWH( 0, 20, 100, 40), GL.Algorithm.ControlRect(RandomRect,1,0, 4,1));
+  AssertRectEqual(RectLTWH( 0, 40, 100, 20), GL.Algorithm.ControlRect(RandomRect,2,0, 4,1));
+END;
+
+
 
 INITIALIZATION
   TDUnitX.RegisterTestFixture(TGridLayoutAlgorithmTests);

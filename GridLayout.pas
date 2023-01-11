@@ -162,7 +162,7 @@ TYPE
 
       PROCEDURE Calculate(ClientRect : TRect);
 
-      FUNCTION ControlRect(Row, Column : INTEGER; BoundsRect : TRect) : TRect;
+      FUNCTION ControlRect(BoundsRect: TRect; Row, Column: Integer) : TRect;
 
       PROPERTY ColumnCount : INTEGER READ GetColumnCount;
       PROPERTY RowCount    : INTEGER READ GetRowCount;
@@ -744,7 +744,7 @@ BEGIN
 
       // TODO Align, Margin
       // Set Control Bounds
-      VAR CtrlBounds  := FAlgorithm.ControlRect(Item.Row, Item.Column, Item.Control.BoundsRect);
+      VAR CtrlBounds  := FAlgorithm.ControlRect(Item.Control.BoundsRect, Item.Row, Item.Column);
       Item.Control.BoundsRect := CtrlBounds;
     END;
 
@@ -977,7 +977,7 @@ BEGIN
 END;
 
 
-FUNCTION TGridLayoutAlgorithm.ControlRect(Row, Column : INTEGER; BoundsRect : TRect): TRect;
+FUNCTION TGridLayoutAlgorithm.ControlRect(BoundsRect : TRect; Row, Column : INTEGER): TRect;
 
   FUNCTION _IsAutoSize(Def : TGridLayoutDefinitionBase) : BOOLEAN;  INLINE;
   BEGIN

@@ -83,10 +83,10 @@ BEGIN
 
   GL.Algorithm.Calculate(LayoutBounds);
 
-  VAR R00 := GL.Algorithm.ControlRect(0,0,RandomRect);
-  VAR R01 := GL.Algorithm.ControlRect(0,1,RandomRect);
-  VAR R11 := GL.Algorithm.ControlRect(1,1,RandomRect);
-  VAR R10 := GL.Algorithm.ControlRect(1,0,RandomRect);
+  VAR R00 := GL.Algorithm.ControlRect(RandomRect,0,0);
+  VAR R01 := GL.Algorithm.ControlRect(RandomRect,0,1);
+  VAR R11 := GL.Algorithm.ControlRect(RandomRect,1,1);
+  VAR R10 := GL.Algorithm.ControlRect(RandomRect,1,0);
 
   AssertRectEqual(LayoutBounds, R00);
   AssertRectEqual(LayoutBounds, R01);
@@ -106,10 +106,10 @@ BEGIN
   GL.AddRow(gsmPixels, 25);
   GL.Algorithm.Calculate(LayoutBounds);
 
-  VAR R00 := GL.Algorithm.ControlRect(0,0,RandomRect);
-  VAR R01 := GL.Algorithm.ControlRect(0,1,RandomRect);
-  VAR R11 := GL.Algorithm.ControlRect(1,1,RandomRect);
-  VAR R10 := GL.Algorithm.ControlRect(1,0,RandomRect);
+  VAR R00 := GL.Algorithm.ControlRect(RandomRect,0,0);
+  VAR R01 := GL.Algorithm.ControlRect(RandomRect,0,1);
+  VAR R11 := GL.Algorithm.ControlRect(RandomRect,1,1);
+  VAR R10 := GL.Algorithm.ControlRect(RandomRect,1,0);
 
   AssertRectEqual(ExpectedRect, R00);
   AssertRectEqual(ExpectedRect, R01);
@@ -129,10 +129,10 @@ BEGIN
   GL.AddColumn(gsmPixels, 30);
   GL.Algorithm.Calculate(LayoutBounds);
 
-  VAR R00 := GL.Algorithm.ControlRect(0,0,RandomRect);
-  VAR R01 := GL.Algorithm.ControlRect(0,1,RandomRect);
-  VAR R11 := GL.Algorithm.ControlRect(1,1,RandomRect);
-  VAR R10 := GL.Algorithm.ControlRect(1,0,RandomRect);
+  VAR R00 := GL.Algorithm.ControlRect(RandomRect,0,0);
+  VAR R01 := GL.Algorithm.ControlRect(RandomRect,0,1);
+  VAR R11 := GL.Algorithm.ControlRect(RandomRect,1,1);
+  VAR R10 := GL.Algorithm.ControlRect(RandomRect,1,0);
 
   AssertRectEqual(ExpectedRect, R00);
   AssertRectEqual(ExpectedRect, R01);
@@ -153,10 +153,10 @@ BEGIN
   GL.AddColumn(gsmPixels, 30);
   GL.Algorithm.Calculate(LayoutBounds);
 
-  VAR R00 := GL.Algorithm.ControlRect(0,0,RandomRect);
-  VAR R01 := GL.Algorithm.ControlRect(0,1,RandomRect);
-  VAR R11 := GL.Algorithm.ControlRect(1,1,RandomRect);
-  VAR R10 := GL.Algorithm.ControlRect(1,0,RandomRect);
+  VAR R00 := GL.Algorithm.ControlRect(RandomRect,0,0);
+  VAR R01 := GL.Algorithm.ControlRect(RandomRect,0,1);
+  VAR R11 := GL.Algorithm.ControlRect(RandomRect,1,1);
+  VAR R10 := GL.Algorithm.ControlRect(RandomRect,1,0);
 
   AssertRectEqual(ExpectedRect, R00);
   AssertRectEqual(ExpectedRect, R01);
@@ -180,10 +180,10 @@ BEGIN
 
   GL.Algorithm.Calculate(LayoutBounds);
 
-  AssertRectEqual(Rect(0, 0,100,  6), GL.Algorithm.ControlRect(0,0,RandomRect));  // Height = floor((100-32-28)/6) * 1
-  AssertRectEqual(Rect(0, 6,100, 34), GL.Algorithm.ControlRect(1,0,RandomRect));
-  AssertRectEqual(Rect(0,34,100, 66), GL.Algorithm.ControlRect(2,0,RandomRect));
-  AssertRectEqual(Rect(0,66,100, 99), GL.Algorithm.ControlRect(3,0,RandomRect));  // Height = floor((100-32-28)/6) * 5
+  AssertRectEqual(Rect(0, 0,100,  6), GL.Algorithm.ControlRect(RandomRect,0,0));  // Height = floor((100-32-28)/6) * 1
+  AssertRectEqual(Rect(0, 6,100, 34), GL.Algorithm.ControlRect(RandomRect,1,0));
+  AssertRectEqual(Rect(0,34,100, 66), GL.Algorithm.ControlRect(RandomRect,2,0));
+  AssertRectEqual(Rect(0,66,100, 99), GL.Algorithm.ControlRect(RandomRect,3,0));  // Height = floor((100-32-28)/6) * 5
 END;
 
 
@@ -203,9 +203,9 @@ BEGIN
 
   GL.Algorithm.Calculate(LayoutBounds);
 
-  VAR R00 := GL.Algorithm.ControlRect(0,0,RandomRect);
-  VAR R01 := GL.Algorithm.ControlRect(0,1,RandomRect);
-  VAR R02 := GL.Algorithm.ControlRect(0,2,RandomRect);
+  VAR R00 := GL.Algorithm.ControlRect(RandomRect,0,0);
+  VAR R01 := GL.Algorithm.ControlRect(RandomRect,0,1);
+  VAR R02 := GL.Algorithm.ControlRect(RandomRect,0,2);
 
   AssertRectEqual(RectLTWH( 0, 0, 20, 100), R00);
   AssertRectEqual(RectLTWH(30, 0, 20, 100), R01);
@@ -229,9 +229,9 @@ BEGIN
 
   GL.Algorithm.Calculate(LayoutBounds);
 
-  VAR R00 := GL.Algorithm.ControlRect(0,0,RandomRect);
-  VAR R10 := GL.Algorithm.ControlRect(1,0,RandomRect);
-  VAR R20 := GL.Algorithm.ControlRect(2,0,RandomRect);
+  VAR R00 := GL.Algorithm.ControlRect(RandomRect,0,0);
+  VAR R10 := GL.Algorithm.ControlRect(RandomRect,1,0);
+  VAR R20 := GL.Algorithm.ControlRect(RandomRect,2,0);
 
   AssertRectEqual(RectLTWH( 0,  0, 100, 20), R00);
   AssertRectEqual(RectLTWH( 0, 30, 100, 20), R10);

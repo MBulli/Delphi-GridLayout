@@ -17,6 +17,12 @@ USES
   Vcl.Graphics,
   Vcl.WinXPanels;
 
+
+// Enables experimental Drag and Drop support for the form designer.
+// Normally drag and drop is handled by the designer, this feature tries
+// to outsmart the designer hook but currently fails doing so.
+{ $ DEFINE EnableExperimentalDesignerHook}
+
 {
  TODO:
  - RemoveCol/Row/Item methods
@@ -80,10 +86,12 @@ TYPE
 
 
   TGridLayoutItem = CLASS(TCollectionItem)
+{$IFDEF EnableExperimentalDesignerHook}
   STRICT PRIVATE
     FOrigCtrlWndProc : TWndMethod;
 
     PROCEDURE DesignControlWndProcHook(VAR Message: TMessage);
+{$ENDIF}
 
   STRICT PRIVATE
     FControl : TControl;
@@ -337,6 +345,7 @@ BEGIN
 END;
 
 
+{$IFDEF EnableExperimentalDesignerHook}
 PROCEDURE TGridLayoutItem.DesignControlWndProcHook(var Message: TMessage);
 BEGIN
   Assert(Assigned(FOrigCtrlWndProc));
@@ -364,6 +373,7 @@ BEGIN
 
   FOrigCtrlWndProc(Message);
 END;
+{$ENDIF}
 
 
 FUNCTION TGridLayoutItem.GetDisplayName: STRING;
@@ -378,9 +388,11 @@ BEGIN
 
   Result := Format('%s[%d, %d] (%s)', [ClassName, FColumn, FRow, CtrlName]);
 
+{$IFDEF EnableExperimentalDesignerHook}
   IF Assigned(FOrigCtrlWndProc) THEN BEGIN
     Result := Result + ' H';
   END;
+{$ENDIF}
 END;
 
 
@@ -410,6 +422,7 @@ END;
 
 PROCEDURE TGridLayoutItem.SetControl(NewValue: TControl);
 
+{$IFDEF EnableExperimentalDesignerHook}
   FUNCTION _AlreadyHooked(CONST Ctrl : TControl) : BOOLEAN; INLINE;
   BEGIN
     Result := (TMethod(Ctrl.WindowProc).Code = @TGridLayoutItem.DesignControlWndProcHook);
@@ -423,6 +436,7 @@ PROCEDURE TGridLayoutItem.SetControl(NewValue: TControl);
 
     Result := (csDesigning IN FControl.ComponentState);
   END;
+{$ENDIF}
 
   FUNCTION _ControlAlreadyAssigned : BOOLEAN;
   BEGIN
@@ -447,6 +461,7 @@ BEGIN
     EXIT;
   END;
 
+{$IFDEF EnableExperimentalDesignerHook}
   // Reset old control state
   IF FControl <> NIL THEN BEGIN
     IF Assigned(FOrigCtrlWndProc) THEN BEGIN
@@ -455,9 +470,11 @@ BEGIN
     END;
   END;
 
+  FOrigCtrlWndProc := NIL;
+{$ENDIF}
+
   // Set new control
   FControl := NewValue;
-  FOrigCtrlWndProc := NIL;
 
   IF Assigned(FControl) THEN BEGIN
     // Set Parent if necessary
@@ -465,11 +482,13 @@ BEGIN
       FControl.Parent := OwningLayout;
     END;
 
+{$IFDEF EnableExperimentalDesignerHook}
     // Hook window for drag and drop form designer hack
     IF _ShouldHookWndProc THEN BEGIN
       FOrigCtrlWndProc := FControl.WindowProc;
       FControl.WindowProc := DesignControlWndProcHook;
     END;
+{$ENDIF}
   END;
 
   Changed(false);

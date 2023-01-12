@@ -20,7 +20,7 @@ object Form1: TForm1
     Align = alLeft
     Color = clWindow
     ParentBackground = False
-    ColumnDefinition = <
+    ColumnDefinitions = <
       item
         Mode = gsmPixels
         Width = 50.000000000000000000
@@ -61,7 +61,6 @@ object Form1: TForm1
       item
         Control = Button2
         Column = 2
-        Row = 0
       end
       item
         Control = Button3
@@ -162,7 +161,7 @@ object Form1: TForm1
     Height = 346
     Color = clWhite
     ParentBackground = False
-    ColumnDefinition = <
+    ColumnDefinitions = <
       item
         Mode = gsmPixels
         Width = 100.000000000000000000
@@ -191,17 +190,13 @@ object Form1: TForm1
     Items = <
       item
         Control = Button5
-        Column = 0
-        Row = 0
       end
       item
         Control = Button6
         Column = 1
-        Row = 0
       end
       item
         Control = Button7
-        Column = 0
         Row = 1
       end
       item
@@ -212,11 +207,9 @@ object Form1: TForm1
       item
         Control = Button9
         Column = 2
-        Row = 0
       end
       item
         Control = Button10
-        Column = 0
         Row = 2
       end
       item

@@ -238,9 +238,9 @@ TYPE
     PROPERTY ParentBackground;
     PROPERTY ParentColor;
 
-    PROPERTY ColumnDefinition : TGridLayoutColumnCollection READ FColumnDef WRITE SetColumnDefinitionCollection;   // TODO Missing s for ColumnDefinition
-    PROPERTY RowDefinitions   : TGridLayoutRowCollection    READ FRowDef    WRITE SetRowDefinitionCollection;
-    PROPERTY Items            : TGridLayoutItemCollection   READ FItems     WRITE SetItemCollection;
+    PROPERTY ColumnDefinitions : TGridLayoutColumnCollection READ FColumnDef WRITE SetColumnDefinitionCollection;
+    PROPERTY RowDefinitions    : TGridLayoutRowCollection    READ FRowDef    WRITE SetRowDefinitionCollection;
+    PROPERTY Items             : TGridLayoutItemCollection   READ FItems     WRITE SetItemCollection;
 
     PROPERTY ColumnGap : INTEGER READ FColumnGap WRITE SetColumnGap DEFAULT 0;
     PROPERTY RowGap    : INTEGER READ FRowGap    WRITE SetRowGap    DEFAULT 0;

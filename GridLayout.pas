@@ -392,7 +392,7 @@ BEGIN
     ELSE CtrlName := FControl.ClassName;
   END;
 
-  Result := Format('%s[%d, %d] (%s)', [ClassName, FColumn, FRow, CtrlName]);
+  Result := Format('%s[%d, %d] (%s)', [ClassName, FRow, FColumn, CtrlName]);
 
 {$IFDEF EnableExperimentalDesignerHook}
   IF Assigned(FOrigCtrlWndProc) THEN BEGIN

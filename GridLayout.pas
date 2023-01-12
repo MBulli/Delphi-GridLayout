@@ -236,6 +236,7 @@ TYPE
     PROPERTY Align;
     PROPERTY Color;
     PROPERTY ParentBackground;
+    PROPERTY ParentColor;
 
     PROPERTY ColumnDefinition : TGridLayoutColumnCollection READ FColumnDef WRITE SetColumnDefinitionCollection;   // TODO Missing s for ColumnDefinition
     PROPERTY RowDefinitions   : TGridLayoutRowCollection    READ FRowDef    WRITE SetRowDefinitionCollection;

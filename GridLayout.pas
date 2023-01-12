@@ -958,12 +958,11 @@ BEGIN
     END;
   END;
 
-  VAR StarWidthRemainder  := ClientRect.Width - SumNonStarWidth; // TODO ist Rect richtig?
-  VAR StarHeightRemainder := ClientRect.Height - SumNonStarHeight;
-
-
   VAR ColumnGap := Max(0, Self.FParentLayout.FColumnGap);
   VAR RowGap    := Max(0, Self.FParentLayout.FRowGap);
+
+  VAR StarWidthRemainder  := ClientRect.Width  - SumNonStarWidth  - (Length(FColumns)-1)*ColumnGap;
+  VAR StarHeightRemainder := ClientRect.Height - SumNonStarHeight - (Length(FRows)-1)*RowGap;
 
   // 2. pass - calculate star fractions
   // for columns

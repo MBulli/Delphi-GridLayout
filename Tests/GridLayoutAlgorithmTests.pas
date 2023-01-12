@@ -46,6 +46,9 @@ TYPE
     // TODO Col/Row-Span tests for basic function
     // TODO Col/Row-Span tests for autosize row/cols
 
+    [Test]
+    PROCEDURE TestColumnSpanWithStarColumn;
+
   END;
 
 IMPLEMENTATION
@@ -246,6 +249,52 @@ BEGIN
   AssertRectEqual(RectLTWH( 0,  0, 100, 20), R00);
   AssertRectEqual(RectLTWH( 0, 30, 100, 20), R10);
   AssertRectEqual(RectLTWH( 0, 60, 100, 20), R20);
+END;
+
+
+PROCEDURE TGridLayoutAlgorithmTests.TestColumnSpanWithStarColumn;
+BEGIN
+  VAR LayoutBounds := Rect(0,0,100,100);
+  VAR RandomRect   := Rect(42,1337,512,1024);
+
+  VAR GL := TGridLayout.Create(NIL);
+
+  GL.AddColumn(gsmStar  , 1);
+  GL.AddColumn(gsmPixels, 20);
+  GL.AddColumn(gsmPixels, 20);
+
+  GL.AddRow(gsmPixels, 30);
+  GL.AddRow(gsmPixels, 30);
+  GL.AddRow(gsmPixels, 30);
+
+  GL.ColumnGap := 10;
+
+  GL.Algorithm.Calculate(LayoutBounds);
+
+  VAR SVG := TSvgExport.Create('TestColumnSpanWithStarColumn.svg', GL, LayoutBounds);
+  SVG.AddRect(RandomRect, 0,0, 0,3);
+  SVG.AddRect(RandomRect, 1,1, 0,2);
+  SVG.AddRect(RandomRect, 2,2, 0,1);
+  FreeAndNil(SVG);
+
+
+  VAR R00 := GL.Algorithm.ControlRect(RandomRect,0,0, 0,3);
+  VAR R01 := GL.Algorithm.ControlRect(RandomRect,1,1, 0,2);
+  VAR R02 := GL.Algorithm.ControlRect(RandomRect,2,2, 0,1);
+
+  AssertRectEqual(RectLTWH( 0,  0, 100, 30), R00);
+  AssertRectEqual(RectLTWH(50, 30,  50, 30), R01);
+  AssertRectEqual(RectLTWH(80, 60,  20, 30), R02);
+END;
+
+
+  VAR R00 := GL.Algorithm.ControlRect(RandomRect,0,0, 0,3);
+  VAR R01 := GL.Algorithm.ControlRect(RandomRect,0,1, 0,2);
+  VAR R02 := GL.Algorithm.ControlRect(RandomRect,0,2, 0,1);
+
+  AssertRectEqual(RectLTWH( 0, 0, 100, 100), R00);
+  AssertRectEqual(RectLTWH(60, 0,  40, 100), R01);
+  AssertRectEqual(RectLTWH(80, 0,  20, 100), R02);
 END;
 
 

@@ -1019,6 +1019,9 @@ BEGIN
   ColumnSpan := EnsureRange(ColumnSpan, 1, Length(FColumns) - Column);
   RowSpan    := EnsureRange(RowSpan   , 1, Length(FRows   ) - Row);
 
+  VAR ColumnGap := Max(0, Self.FParentLayout.FColumnGap);
+  VAR RowGap    := Max(0, Self.FParentLayout.FRowGap);
+
   Result := Default(TRect);
   Result.Top  := Trunc(FRows[Row].MinY);
   Result.Left := Trunc(FColumns[Column].MinX);
@@ -1032,6 +1035,10 @@ BEGIN
   FOR VAR RowIndex := Row TO Row + RowSpan - 1 DO BEGIN
     Height := Height + FRows[RowIndex].Height;
   END;
+
+  // Adjust Gaps
+  Width  := Width  + (ColumnSpan-1)*ColumnGap;
+  Height := Height + (RowSpan-1)*RowGap;
 
   Result.Width  := Trunc(Width);
   Result.Height := Trunc(Height);

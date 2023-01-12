@@ -7,7 +7,8 @@ USES
   System.Types,
 
   DUnitX.TestFramework,
-  GridLayout;
+  GridLayout,
+  SvgExport;
 
 TYPE
   [TestFixture]

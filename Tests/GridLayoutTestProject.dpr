@@ -14,7 +14,8 @@ uses
   {$ENDIF }
   DUnitX.TestFramework,
   GridLayoutAlgorithmTests in 'GridLayoutAlgorithmTests.pas',
-  GridLayout in '..\GridLayout.pas';
+  GridLayout in '..\GridLayout.pas',
+  SvgExport in 'SvgExport.pas';
 
 {$IFNDEF TESTINSIGHT}
 var

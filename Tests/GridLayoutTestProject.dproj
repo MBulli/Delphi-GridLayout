@@ -87,6 +87,7 @@
         </DelphiCompile>
         <DCCReference Include="GridLayoutAlgorithmTests.pas"/>
         <DCCReference Include="..\GridLayout.pas"/>
+        <DCCReference Include="SvgExport.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

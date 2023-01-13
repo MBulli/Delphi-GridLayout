@@ -25,12 +25,16 @@ USES
 
 {
  TODO:
- - RemoveCol/Row/Item methods
+ - RemoveCol/Row/Item/Clear methods - What should happen with the assigned controls?
  - TComponent Editor
  - TextOut Values in Paint for Columns
  - MinWidth/MinHeigth
+ - AutoSize on container level
  - Add "Row/Column" fake properties to controls https://edn.embarcadero.com/article/33448
- - Row and Column names as optional alternative for indicies?
+ - Padding property for TGridLayoutItem
+ - Small parser for quick row/column setup in code like GL.SetColumns('10px 2* auto');
+ - Refactoring: It should be possible to unify the layout algorithm code to be agnostic of the layout direction.
+                Meaning, the same code should compute the rows as well the columns.
 }
 
 TYPE

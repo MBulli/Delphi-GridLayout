@@ -671,6 +671,7 @@ BEGIN
   IF FColumnGap <> NewValue THEN BEGIN
     FColumnGap := NewValue;
     Realign;
+    Invalidate;
   END;
 END;
 
@@ -688,6 +689,7 @@ BEGIN
   IF FRowGap <> NewValue THEN BEGIN
     FRowGap := NewValue;
     Realign;
+    Invalidate;
   END;
 END;
 

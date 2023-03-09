@@ -787,9 +787,18 @@ BEGIN
       VAR CtrlBounds  := FAlgorithm.ControlRect(Item.Control.BoundsRect, Item.Row, Item.Column, Item.RowSpan, Item.ColumnSpan);
 
       Item.Control.Margins.SetControlBounds(CtrlBounds, TRUE);
+
+      IF csDesigning IN ComponentState THEN BEGIN
+        Item.Control.Invalidate;
+      END;
     END;
 
-    ControlsAligned();
+    // Repaint grid lines in design mode
+    IF csDesigning IN ComponentState THEN BEGIN
+      Invalidate;
+    END;
+
+    ControlsAligned;
   END; // of FItems.Count > 0
 
   IF Showing THEN BEGIN

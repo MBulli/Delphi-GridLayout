@@ -728,12 +728,23 @@ BEGIN
           END;
         END;
 
-        VAR CtrlScreenRect := Message.Control.ClientToScreen(Message.Control.ClientRect);
-        VAR ClientPos := ScreenToClient(CtrlScreenRect.Location);
-        VAR Col := ColumnIndexFromPos(ClientPos);
-        VAR Row := RowIndexFromPos(ClientPos);
+        // If Control is dragged from the palette list and dropped while holding the ctrl key,
+        // the GridLayout tries to place the control in the cell under the mouse cursor.
+        // The default behavior is to set the column and row to -1 to let the user decide
+        // where the control should be placed, as the drop position is not always the best choice
+        // and might mess up the bounds of the control, which makes it hard to move them to autosize
+        // columns or rows.
+        IF GetKeyState(VK_CONTROL) < 0 THEN BEGIN
+          VAR CtrlScreenRect := Message.Control.ClientToScreen(Message.Control.ClientRect);
+          VAR ClientPos := ScreenToClient(CtrlScreenRect.Location);
+          VAR Col := ColumnIndexFromPos(ClientPos);
+          VAR Row := RowIndexFromPos(ClientPos);
 
-        AddItem(Message.Control, Row, Col);
+          AddItem(Message.Control, Row, Col);
+        END
+        ELSE BEGIN
+          AddItem(Message.Control, -1, -1);
+        END;
       END
       ELSE BEGIN
         RemoveItemForControl(Message.Control);

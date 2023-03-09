@@ -783,10 +783,10 @@ BEGIN
 //          [self insertSubview:item.view atIndex:itemIndex];
 //      }
 
-      // TODO Align, Margin
       // Set Control Bounds
       VAR CtrlBounds  := FAlgorithm.ControlRect(Item.Control.BoundsRect, Item.Row, Item.Column, Item.RowSpan, Item.ColumnSpan);
-      Item.Control.BoundsRect := CtrlBounds;
+
+      Item.Control.Margins.SetControlBounds(CtrlBounds, TRUE);
     END;
 
     ControlsAligned();

@@ -29,6 +29,7 @@ type
     Button12: TButton;
     Button13: TButton;
     procedure FormCreate(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
   private
     { Private declarations }
 
@@ -42,6 +43,20 @@ var
 implementation
 
 {$R *.dfm}
+
+
+procedure TForm1.Button1Click(Sender: TObject);
+begin
+  var Vis := GridLayout1.ColumnVisbility[1];
+
+  Inc(Vis);
+
+  if (Vis > High(TGridVisibility)) then begin
+    Vis := Low(TGridVisibility);
+  end;
+
+  GridLayout1.ColumnVisbility[1] := Vis;
+end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 
@@ -69,7 +84,7 @@ begin
       pan.Color := RandomColor();
       pan.ParentBackground := false;
       pan.Visible := true;
-      pan.Name := Format('Panel_%dx%d', [c, r]);
+      pan.Name := Format('Panel_%dx%d', [r, c]);
 
       GridLayout1.AddItem(pan, r, c);
     end;

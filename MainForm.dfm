@@ -24,38 +24,48 @@ object Form1: TForm1
       item
         Mode = gsmPixels
         Width = 50.000000000000000000
+        Visibility = glvVisible
       end
       item
         Mode = gsmPixels
         Width = 100.000000000000000000
+        Visibility = glvVisible
       end
       item
         Mode = gsmPixels
+        Width = 50.000000000000000000
+        Visibility = glvVisible
       end
       item
         Mode = gsmStar
         Width = 1.000000000000000000
+        Visibility = glvVisible
       end>
     RowDefinitions = <
       item
         Mode = gsmPixels
         Height = 100.000000000000000000
+        Visibility = glvVisible
       end
       item
         Mode = gsmPixels
         Height = 50.000000000000000000
+        Visibility = glvHidden
       end
       item
         Mode = gsmPixels
         Height = 10.000000000000000000
+        Visibility = glvVisible
       end
       item
         Mode = gsmPixels
         Height = 50.000000000000000000
+        Visibility = glvVisible
       end
       item
         Mode = gsmStar
         Height = 1.000000000000000000
+        Visibility = glvVisible
       end>
     Items = <
       item
@@ -70,7 +80,7 @@ object Form1: TForm1
     object Button2: TButton
       Left = 150
       Top = 0
-      Width = 0
+      Width = 50
       Height = 100
       Caption = 'Button1'
       TabOrder = 0
@@ -82,6 +92,7 @@ object Form1: TForm1
       Height = 50
       Caption = 'Button3'
       TabOrder = 1
+      Visible = False
     end
   end
   object GridPanel1: TGridPanel
@@ -153,6 +164,7 @@ object Form1: TForm1
     Height = 25
     Caption = 'Button1'
     TabOrder = 4
+    OnClick = Button1Click
   end
   object GridLayout2: TGridLayout
     Left = 384
@@ -165,27 +177,33 @@ object Form1: TForm1
       item
         Mode = gsmPixels
         Width = 100.000000000000000000
+        Visibility = glvVisible
       end
       item
         Mode = gsmPixels
         Width = 90.000000000000000000
+        Visibility = glvVisible
       end
       item
         Mode = gsmPixels
         Width = 50.000000000000000000
+        Visibility = glvVisible
       end>
     RowDefinitions = <
       item
         Mode = gsmPixels
         Height = 50.000000000000000000
+        Visibility = glvVisible
       end
       item
         Mode = gsmPixels
         Height = 100.000000000000000000
+        Visibility = glvVisible
       end
       item
         Mode = gsmPixels
         Height = 100.000000000000000000
+        Visibility = glvVisible
       end>
     Items = <
       item

@@ -40,17 +40,21 @@ USES
 TYPE
   TGridLayoutSizeMode = (gsmPixels, gsmStar, gsmAutosize);
 
+  TGridVisibility = (glvVisible, glvCollapsed, glvHidden);
+
   TGridLayout = CLASS;
 
   TGridLayoutDefinitionBase = CLASS(TCollectionItem)
   PROTECTED
     FMode   : TGridLayoutSizeMode;
     FFactor : Single;
+    FVisibility : TGridVisibility;
 
     FUNCTION GetDisplayName: string; OVERRIDE;
 
     PROCEDURE SetFactor(NewValue : Single);
     PROCEDURE SetMode  (NewValue : TGridLayoutSizeMode);
+    PROCEDURE SetVisibility(NewValue : TGridVisibility);
 
   PUBLIC
     CONSTRUCTOR Create(Collection: TCollection); OVERRIDE;
@@ -61,6 +65,7 @@ TYPE
   PUBLISHED
     PROPERTY Mode  : TGridLayoutSizeMode READ FMode   WRITE SetMode;
     PROPERTY Width : Single              READ FFactor WRITE SetFactor;
+    PROPERTY Visibility : TGridVisibility READ FVisibility WRITE SetVisibility;
   END;
 
 
@@ -68,6 +73,7 @@ TYPE
   PUBLISHED
     PROPERTY Mode   : TGridLayoutSizeMode READ FMode   WRITE SetMode;
     PROPERTY Height : Single READ FFactor WRITE SetFactor;
+    PROPERTY Visibility : TGridVisibility READ FVisibility WRITE SetVisibility;
   END;
 
 
@@ -160,6 +166,8 @@ TYPE
       FUNCTION GetColumn(Index : INTEGER) : TGridLayoutColumnTuple;  INLINE;
       FUNCTION GetRow   (Index : INTEGER) : TGridLayoutRowTuple;     INLINE;
 
+      FUNCTION ColumnVisiblity(ColumnIndex : INTEGER) : TGridVisibility;
+      FUNCTION RowVisiblity(RowIndex : INTEGER) : TGridVisibility;
 
       FUNCTION ColumnWidthAtIndex (ColumnIndex : Integer) : Single;
       FUNCTION RowHeightAtIndex   (RowIndex    : Integer) : Single;
@@ -178,6 +186,7 @@ TYPE
       PROPERTY Columns[Index : INTEGER] : TGridLayoutColumnTuple READ GetColumn;
       PROPERTY Rows   [Index : INTEGER] : TGridLayoutRowTuple READ GetRow;
   END;
+
 
   TGridLayout = CLASS(TCustomPanel)
   PRIVATE
@@ -198,6 +207,11 @@ TYPE
     PROCEDURE SetColumnDefinitionCollection(CONST AValue : TGridLayoutColumnCollection);
     PROCEDURE SetRowDefinitionCollection   (CONST AValue : TGridlayoutRowCollection);
     PROCEDURE SetItemCollection            (CONST AValue : TGridLayoutItemCollection);
+
+    FUNCTION  GetColumnVisbility(ColumnIndex : Integer) : TGridVisibility;
+    FUNCTION  GetRowVisbility   (RowIndex : Integer) : TGridVisibility;
+    PROCEDURE SetColumnVisbility(ColumnIndex : Integer; Visbility : TGridVisibility);
+    PROCEDURE SetRowVisbility   (RowIndex : Integer; Visbility : TGridVisibility);
 
     PROCEDURE CMControlChange(var Message: TCMControlChange); MESSAGE CM_CONTROLCHANGE;
 
@@ -227,6 +241,9 @@ TYPE
 
 //    PROCEDURE AddColumnDefinition    (ColumnDefinition : TGridLayoutColumnDefinition);
 //    PROCEDURE RemoveColumnDefinition (ColumnDefinition : TGridLayoutColumnDefinition);
+
+    PROPERTY ColumnVisbility[Index: Integer] : TGridVisibility READ GetColumnVisbility  WRITE SetColumnVisbility;
+    PROPERTY RowVisbility[Index: Integer] : TGridVisibility READ GetRowVisbility  WRITE SetRowVisbility;
 
     FUNCTION ColumnIndexFromPos(CONST Position : TPoint) : INTEGER;
     FUNCTION RowIndexFromPos   (CONST Position : TPoint) : INTEGER;
@@ -300,6 +317,12 @@ BEGIN
   END;
 END;
 
+
+PROCEDURE TGridLayoutDefinitionBase.SetVisibility(NewValue: TGridVisibility);
+BEGIN
+  FVisibility := NewValue;
+  Changed(false);
+END;
 
 { TGridLayoutColumnCollection }
 
@@ -698,6 +721,30 @@ BEGIN
 END;
 
 
+FUNCTION TGridLayout.GetColumnVisbility(ColumnIndex: Integer): TGridVisibility;
+BEGIN
+  Result := (FColumnDef.Items[ColumnIndex] AS TGridLayoutColumnDefinition).Visibility
+END;
+
+
+FUNCTION TGridLayout.GetRowVisbility(RowIndex: Integer): TGridVisibility;
+BEGIN
+  Result := (FRowDef.Items[RowIndex] AS TGridLayoutRowDefinition).Visibility;
+END;
+
+
+PROCEDURE TGridLayout.SetColumnVisbility(ColumnIndex : Integer; Visbility : TGridVisibility);
+BEGIN
+  (FColumnDef.Items[ColumnIndex] AS TGridLayoutColumnDefinition).Visibility := Visbility;
+END;
+
+
+PROCEDURE TGridLayout.SetRowVisbility(RowIndex: Integer; Visbility: TGridVisibility);
+BEGIN
+  (FRowDef.Items[RowIndex] AS TGridLayoutRowDefinition).Visibility := Visbility;
+END;
+
+
 PROCEDURE TGridLayout.SetItemCollection(CONST AValue: TGridLayoutItemCollection);
 BEGIN
   FItems.Assign(AValue);
@@ -770,26 +817,26 @@ BEGIN
       // skip invalid items
       IF   (Item = NIL)
         OR (Item.Control = NIL)
-        OR (NOT Item.Control.Visible)
         OR (NOT InRange(Item.Row, 0, FRowDef.Count-1))
         OR (NOT InRange(Item.Column, 0, FColumnDef.Count-1))
       THEN BEGIN
         Continue;
       END;
 
-// TODO
-//      // if items view is not already a subview, add it
-//      if (item.view.superview != self) {
-//          [self insertSubview:item.view atIndex:itemIndex];
-//      }
+      VAR ColVis := (FColumnDef.Items[Item.Column] AS TGridLayoutColumnDefinition).Visibility;
+      VAR RowVis := (FRowDef.Items[Item.Row] AS TGridLayoutRowDefinition).Visibility;
+
+      Item.Control.Visible := (ColVis = glvVisible) AND (RowVis = glvVisible);
 
       // Set Control Bounds
-      VAR CtrlBounds  := FAlgorithm.ControlRect(Item.Control.BoundsRect, Item.Row, Item.Column, Item.RowSpan, Item.ColumnSpan);
+      IF Item.Control.Visible THEN BEGIN
+        VAR CtrlBounds  := FAlgorithm.ControlRect(Item.Control.BoundsRect, Item.Row, Item.Column, Item.RowSpan, Item.ColumnSpan);
 
-      Item.Control.Margins.SetControlBounds(CtrlBounds, TRUE);
+        Item.Control.Margins.SetControlBounds(CtrlBounds, TRUE);
 
-      IF csDesigning IN ComponentState THEN BEGIN
-        Item.Control.Invalidate;
+        IF csDesigning IN ComponentState THEN BEGIN
+          Item.Control.Invalidate;
+        END;
       END;
     END;
 
@@ -949,6 +996,8 @@ BEGIN
   VAR SumStarFactorsHorizontal : Single := 0.0;
   VAR SumStarFactorsVertical   : Single := 0.0;
 
+  VAR NumColumnsWithGap := 0;
+  VAR NumRowsWithGap    := 0;
 
   // 1. pass - calculate row/column values for none star row/columns
   IF NOT SkipColumns THEN BEGIN
@@ -961,6 +1010,10 @@ BEGIN
       END
       ELSE BEGIN
         SumNonStarWidth := SumNonStarWidth + Width;
+      END;
+
+      IF ColumnVisiblity(C) <> glvCollapsed THEN BEGIN
+        NumColumnsWithGap := NumColumnsWithGap + 1;
       END;
 
       FColumns[c].Width := Width;
@@ -980,6 +1033,10 @@ BEGIN
         SumNonStarHeight := SumNonStarHeight + Height;
       END;
 
+      IF RowVisiblity(R) <> glvCollapsed THEN BEGIN
+        NumRowsWithGap := NumRowsWithGap + 1;
+      END;
+
       FRows[r].Height := Height;
       FRows[r].Definition := rowDef;
     END;
@@ -988,8 +1045,11 @@ BEGIN
   VAR ColumnGap := Max(0, Self.FParentLayout.FColumnGap);
   VAR RowGap    := Max(0, Self.FParentLayout.FRowGap);
 
-  VAR StarWidthRemainder  := ClientRect.Width  - SumNonStarWidth  - (Length(FColumns)-1)*ColumnGap;
-  VAR StarHeightRemainder := ClientRect.Height - SumNonStarHeight - (Length(FRows)-1)*RowGap;
+  VAR TotalColumnGap := Max(0, NumColumnsWithGap-1) * ColumnGap;
+  VAR TotalRowGap    := Max(0, NumRowsWithGap-1   ) * RowGap;
+
+  VAR StarWidthRemainder  := ClientRect.Width  - SumNonStarWidth  - TotalColumnGap;
+  VAR StarHeightRemainder := ClientRect.Height - SumNonStarHeight - TotalRowGap;
 
   // 2. pass - calculate star fractions
   // for columns
@@ -1002,9 +1062,15 @@ BEGIN
       END;
 
       // set minX
-      IF (C = 0)
-      THEN FColumns[C].MinX := 0
-      ELSE FColumns[C].MinX := FColumns[C-1].MinX + FColumns[C-1].Width + ColumnGap;
+      IF (C = 0) THEN BEGIN
+        FColumns[C].MinX := 0
+      END
+      ELSE IF (FColumns[C].Width > 0) THEN BEGIN
+        FColumns[C].MinX := FColumns[C-1].MinX + FColumns[C-1].Width + ColumnGap;
+      END
+      ELSE BEGIN
+        FColumns[C].MinX := FColumns[C-1].MinX + FColumns[C-1].Width;
+      END;
     END;
   END;
 
@@ -1018,19 +1084,25 @@ BEGIN
       END;
 
        // set minY
-      IF (R = 0)
-      THEN FRows[R].MinY := 0
-      ELSE FRows[R].MinY := FRows[R-1].MinY + FRows[R-1].Height + RowGap;
+      IF (R = 0) THEN BEGIN
+        FRows[R].MinY := 0
+      END
+      ELSE IF (FRows[R].Height > 0) THEN BEGIN
+        FRows[R].MinY := FRows[R-1].MinY + FRows[R-1].Height + RowGap;
+      END
+      ELSE BEGIN
+        FRows[R].MinY := FRows[R-1].MinY + FRows[R-1].Height;
+      END;
     END;
   END;
 END;
-
 
 
 FUNCTION TGridLayoutAlgorithm.ControlRect(BoundsRect : TRect; Row, Column : INTEGER): TRect;
 BEGIN
   Result := ControlRect(BoundsRect, Row, Column, 1, 1);
 END;
+
 
 FUNCTION TGridLayoutAlgorithm.ControlRect(BoundsRect : TRect; Row, Column, RowSpan, ColumnSpan : INTEGER): TRect;
 
@@ -1091,7 +1163,10 @@ FUNCTION TGridLayoutAlgorithm.ColumnWidthAtIndex(ColumnIndex: Integer): Single;
 BEGIN
   VAR ColDef := FParentLayout.FColumnDef.Items[ColumnIndex] AS TGridLayoutColumnDefinition;
 
-  IF (ColDef.FMode = gsmAutosize) THEN BEGIN
+  IF ColumnVisiblity(ColumnIndex) = glvCollapsed THEN BEGIN
+    Result := 0;
+  END
+  ELSE IF (ColDef.FMode = gsmAutosize) THEN BEGIN
     // find widest view in column
     VAR MaxWidth := 0.0;
 
@@ -1116,7 +1191,10 @@ FUNCTION TGridLayoutAlgorithm.RowHeightAtIndex(RowIndex: Integer): Single;
 BEGIN
   VAR RowDef := FParentLayout.FRowDef.Items[RowIndex] AS TGridLayoutRowDefinition;
 
-  IF (RowDef.FMode = gsmAutosize) THEN BEGIN
+  IF RowVisiblity(RowIndex) = glvCollapsed THEN BEGIN
+    Result := 0;
+  END
+  ELSE IF (RowDef.FMode = gsmAutosize) THEN BEGIN
     // find tallest view in row
     VAR MaxHeight := 0.0;
 
@@ -1135,6 +1213,27 @@ BEGIN
   END;
 END;
 
+
+FUNCTION TGridLayoutAlgorithm.ColumnVisiblity(ColumnIndex: INTEGER): TGridVisibility;
+BEGIN
+  IF (csDesigning IN Self.FParentLayout.ComponentState) THEN BEGIN
+    Result := glvVisible;
+  END
+  ELSE BEGIN
+    Result := (FParentLayout.FColumnDef.Items[ColumnIndex] AS TGridLayoutColumnDefinition).Visibility;
+  END;
+END;
+
+
+FUNCTION TGridLayoutAlgorithm.RowVisiblity(RowIndex: INTEGER): TGridVisibility;
+BEGIN
+  IF (csDesigning IN Self.FParentLayout.ComponentState) THEN BEGIN
+    Result := glvVisible;
+  END
+  ELSE BEGIN
+    Result := (FParentLayout.FRowDef.Items[RowIndex] AS TGridLayoutRowDefinition).Visibility;
+  END;
+END;
 
 FUNCTION TGridLayoutAlgorithm.GetColumnCount: INTEGER;
 BEGIN

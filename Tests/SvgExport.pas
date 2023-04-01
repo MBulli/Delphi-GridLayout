@@ -40,7 +40,12 @@ BEGIN
   // Rows
   FOR VAR Loop := 0 TO FAlgo.RowCount-2 DO BEGIN
     VAR Row  := FAlgo.Rows[Loop];
-    VAR MaxY := Trunc(Row.MinY + Max(1, Row.Height) + GL.RowGap/2);
+
+    IF Row.Definition.Visibility = glvCollapsed THEN CONTINUE;
+
+    VAR Rect := FAlgo.ControlRect(TRect.Empty, Loop, 0, 1, FAlgo.ColumnCount);
+
+    VAR MaxY := Trunc(Rect.Bottom + GL.RowGap/2);
 
     VAR x1 := 0;
     VAR y1 := MaxY;
@@ -57,7 +62,12 @@ BEGIN
   // Columns
   FOR VAR Loop := 0 TO FAlgo.ColumnCount-2 DO BEGIN
     VAR Col  := FAlgo.Columns[Loop];
-    VAR MaxX := Trunc(Col.MinX + Max(1, Col.Width) + GL.ColumnGap/2);
+
+    IF Col.Definition.Visibility = glvCollapsed THEN CONTINUE;
+
+    VAR Rect := FAlgo.ControlRect(TRect.Empty, 0, Loop, FAlgo.RowCount, 1);
+
+    VAR MaxX := Trunc(Rect.Right + GL.ColumnGap/2);
 
     VAR x1 := MaxX;
     VAR y1 := 0;

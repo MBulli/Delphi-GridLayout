@@ -245,8 +245,15 @@ TYPE
     PROPERTY ColumnVisbility[Index: Integer] : TGridVisibility READ GetColumnVisbility  WRITE SetColumnVisbility;
     PROPERTY RowVisbility[Index: Integer] : TGridVisibility READ GetRowVisbility  WRITE SetRowVisbility;
 
+    FUNCTION SetColumnVisbilityForControl(AControl : TControl; Visibility : TGridVisibility) : INTEGER;
+    FUNCTION SetRowVisbilityForControl   (AControl : TControl; Visibility : TGridVisibility) : INTEGER;
+
     FUNCTION ColumnIndexFromPos(CONST Position : TPoint) : INTEGER;
     FUNCTION RowIndexFromPos   (CONST Position : TPoint) : INTEGER;
+
+    // TODO: Functions are not recursive; Meaning needs AControl.Parent=self to return something.
+    FUNCTION ColumnIndexFromControl(CONST AControl : TControl) : INTEGER;
+    FUNCTION RowIndexFromControl   (CONST AControl : TControl) : INTEGER;
 
     PROPERTY  ColumnCount : Integer READ GetColumnCount;
     PROPERTY  RowCount    : Integer READ GetRowCount;
@@ -745,6 +752,30 @@ BEGIN
 END;
 
 
+FUNCTION TGridLayout.SetColumnVisbilityForControl(AControl : TControl; Visibility : TGridVisibility) : INTEGER;
+BEGIN
+  VAR ColIndex := ColumnIndexFromControl(AControl);
+
+  IF InRange(ColIndex, 0, FColumnDef.Count) THEN BEGIN
+    SetRowVisbility(ColIndex, Visibility);
+  END;
+
+  Result := ColIndex;
+END;
+
+
+FUNCTION TGridLayout.SetRowVisbilityForControl(AControl : TControl; Visibility : TGridVisibility) : INTEGER;
+BEGIN
+  VAR RowIndex := RowIndexFromControl(AControl);
+
+  IF InRange(RowIndex, 0, FRowDef.Count) THEN BEGIN
+    SetRowVisbility(RowIndex, Visibility);
+  END;
+
+  Result := RowIndex;
+END;
+
+
 PROCEDURE TGridLayout.SetItemCollection(CONST AValue: TGridLayoutItemCollection);
 BEGIN
   FItems.Assign(AValue);
@@ -881,6 +912,40 @@ BEGIN
       EXIT(I);
     END;
   END;
+END;
+
+
+FUNCTION TGridLayout.ColumnIndexFromControl(CONST AControl : TControl) : INTEGER;
+BEGIN
+  IF AControl = NIL THEN EXIT(-1);
+  IF AControl.Parent <> self THEN EXIT(-1);
+
+  FOR VAR I := 0 TO FItems.Count-1 DO BEGIN
+    VAR Item := TGridLayoutItem(FItems.Items[I]);
+
+    IF Item.Control = AControl THEN BEGIN
+      EXIT(Item.Column);
+    END;
+  END;
+
+  Result := -1;
+END;
+
+
+FUNCTION TGridLayout.RowIndexFromControl(CONST AControl : TControl) : INTEGER;
+BEGIN
+  IF AControl = NIL THEN EXIT(-1);
+  IF AControl.Parent <> self THEN EXIT(-1);
+
+  FOR VAR I := 0 TO FItems.Count-1 DO BEGIN
+    VAR Item := TGridLayoutItem(FItems.Items[I]);
+
+    IF Item.Control = AControl THEN BEGIN
+      EXIT(Item.Row);
+    END;
+  END;
+
+  Result := -1;
 END;
 
 

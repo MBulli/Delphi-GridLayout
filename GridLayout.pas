@@ -63,17 +63,17 @@ TYPE
 
   TGridLayoutColumnDefinition = CLASS (TGridLayoutDefinitionBase)
   PUBLISHED
-    PROPERTY Mode  : TGridLayoutSizeMode READ FMode   WRITE SetMode;
-    PROPERTY Width : Single              READ FFactor WRITE SetFactor;
-    PROPERTY Visibility : TGridVisibility READ FVisibility WRITE SetVisibility;
+    PROPERTY Mode       : TGridLayoutSizeMode READ FMode   WRITE SetMode DEFAULT gsmAutosize;
+    PROPERTY Width      : Single              READ FFactor WRITE SetFactor;
+    PROPERTY Visibility : TGridVisibility READ FVisibility WRITE SetVisibility DEFAULT glvVisible;
   END;
 
 
   TGridLayoutRowDefinition = CLASS (TGridLayoutDefinitionBase)
   PUBLISHED
-    PROPERTY Mode   : TGridLayoutSizeMode READ FMode   WRITE SetMode;
-    PROPERTY Height : Single READ FFactor WRITE SetFactor;
-    PROPERTY Visibility : TGridVisibility READ FVisibility WRITE SetVisibility;
+    PROPERTY Mode       : TGridLayoutSizeMode READ FMode   WRITE SetMode DEFAULT gsmAutosize;
+    PROPERTY Height     : Single              READ FFactor WRITE SetFactor;
+    PROPERTY Visibility : TGridVisibility     READ FVisibility WRITE SetVisibility DEFAULT glvVisible;
   END;
 
 
@@ -305,8 +305,9 @@ CONSTRUCTOR TGridLayoutDefinitionBase.Create(Collection: TCollection);
 BEGIN
   INHERITED Create(Collection);
 
-  FMode   := gsmAutosize;
-  FFactor := 0;
+  FMode       := gsmAutosize;
+  FFactor     := 0;
+  FVisibility := glvVisible;
 END;
 
 

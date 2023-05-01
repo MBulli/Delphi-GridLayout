@@ -326,6 +326,13 @@ BEGIN
   ELSE BEGIN
     Result := Result + FloatToStr(FFactor) + '*';
   END;
+
+  IF FVisibility = glvCollapsed THEN BEGIN
+    Result := Result + ' (collapsed)';
+  END
+  ELSE IF FVisibility = glvHidden THEN BEGIN
+    Result := Result + ' (hidden)';
+  END
 END;
 
 

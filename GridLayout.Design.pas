@@ -5,6 +5,7 @@ INTERFACE
 USES
   System.Classes,
   System.Generics.Collections,
+  System.StrUtils,
   System.SysUtils,
   System.UITypes,
   Vcl.Controls,
@@ -60,6 +61,36 @@ TYPE TGridLayoutItemControlPropertyEditor = CLASS(TComponentProperty)
     PROCEDURE GetValues(Proc: TGetStrProc); OVERRIDE;
 END;
 
+TYPE TGlicRowColDefBasePropEditor = CLASS(TPropertyEditor)
+  STRICT PRIVATE
+    PROCEDURE SetValueInternal(CONST Value: STRING);
+
+  PROTECTED
+    FUNCTION IsRow : BOOLEAN; VIRTUAL; ABSTRACT;
+
+  PUBLIC
+    FUNCTION  GetAttributes: TPropertyAttributes; OVERRIDE;
+    PROCEDURE GetValues(Proc: TGetStrProc); OVERRIDE;
+
+
+    PROCEDURE SetValue(CONST Value: WideString); OVERRIDE;
+    PROCEDURE SetValue(CONST Value: STRING); OVERRIDE;
+    FUNCTION  GetValue: STRING; OVERRIDE;
+END;
+
+
+TYPE TGlicRowDefPropEditor = CLASS(TGlicRowColDefBasePropEditor)
+  PROTECTED
+    FUNCTION IsRow : BOOLEAN; OVERRIDE;
+END;
+
+
+TYPE TGlicColDefPropEditor = CLASS(TGlicRowColDefBasePropEditor)
+  PROTECTED
+    FUNCTION IsRow : BOOLEAN; OVERRIDE;
+END;
+
+
 PROCEDURE Register;
 
 IMPLEMENTATION
@@ -69,6 +100,8 @@ BEGIN
   RegisterComponents     ('ProLogic', [TGridLayout]);
   RegisterComponentEditor(TGridLayout, TGridLayoutEditor);
   RegisterPropertyEditor (TypeInfo(TControl), TGridLayoutItem, 'Control', TGridLayoutItemControlPropertyEditor);
+  RegisterPropertyEditor (TypeInfo(TGridLayoutRowDefinition), TGridLayoutItem, 'RowRef', TGlicRowDefPropEditor);
+  RegisterPropertyEditor (TypeInfo(TGridLayoutColumnDefinition), TGridLayoutItem, 'ColumnRef', TGlicColDefPropEditor);
 END;
 
 { TGridLayoutEditor }
@@ -189,6 +222,116 @@ BEGIN
   FOR VAR Value IN FValues DO BEGIN
     Proc(Value);
   END;
+END;
+
+{ TGlicRowColDefBasePropEditor }
+
+FUNCTION TGlicRowColDefBasePropEditor.GetAttributes: TPropertyAttributes;
+BEGIN
+  // When paValueEditable is combined with paReadOnly, it allows the value to be changed *only* via a dialog or the drop down list.
+  Result := [paValueList, {,paMultiSelect,} paRevertable, paValueEditable, paReadOnly];
+END;
+
+
+PROCEDURE TGlicRowColDefBasePropEditor.GetValues(Proc: TGetStrProc);
+BEGIN
+  IF NOT Assigned(Proc) THEN EXIT;
+  VAR EditedItem := self.GetComponent(0) AS TGridLayoutItem; // no multiselect support
+  VAR GridLayout := EditedItem.OwningLayout;
+
+  IF GridLayout = NIL THEN EXIT;
+
+  VAR Collection : TCollection;
+
+  IF IsRow THEN BEGIN
+    Collection := GridLayout.RowDefinitions;
+  END
+  ELSE BEGIN
+    Collection := GridLayout.ColumnDefinitions;
+  END;
+
+  IF Collection = NIL THEN EXIT;
+
+  FOR VAR I := 0 TO Collection.Count-1 DO BEGIN
+    VAR Def := Collection.Items[I];
+
+    Proc(Format('%d - %s', [I, Def.DisplayName]));
+  END;
+END;
+
+
+FUNCTION TGlicRowColDefBasePropEditor.GetValue: STRING;
+BEGIN
+  VAR EditedItem := self.GetComponent(0) AS TGridLayoutItem; // no multiselect support
+  VAR GridLayout := EditedItem.OwningLayout;
+
+  IF GridLayout = NIL THEN EXIT;
+
+  VAR Index : INTEGER;
+  VAR Name  : STRING;
+
+  IF IsRow THEN BEGIN
+    IF EditedItem.RowRef = NIL THEN EXIT;
+
+    Index := EditedItem.Row;
+    Name  := EditedItem.RowRef.DisplayName;
+  END
+  ELSE BEGIN
+    IF EditedItem.ColumnRef = NIL THEN EXIT;
+
+    Index := EditedItem.Column;
+    Name  := EditedItem.ColumnRef.DisplayName;
+  END;
+
+  Result := Format('%d - %s', [Index, Name])
+END;
+
+
+PROCEDURE TGlicRowColDefBasePropEditor.SetValue(CONST Value: WideString);
+BEGIN
+  SetValueInternal(STRING(Value));
+END;
+
+
+PROCEDURE TGlicRowColDefBasePropEditor.SetValue(CONST Value: STRING);
+BEGIN
+  SetValueInternal(Value);
+END;
+
+
+PROCEDURE TGlicRowColDefBasePropEditor.SetValueInternal(CONST Value: STRING);
+BEGIN
+
+  VAR EditedItem := self.GetComponent(0) AS TGridLayoutItem; // no multiselect support
+  VAR GridLayout := EditedItem.OwningLayout;
+
+  IF GridLayout = NIL THEN EXIT;
+
+  VAR Parts := SplitString(Value, ' - ');
+  VAR Index := StrToInt(Parts[0]);
+
+  IF IsRow THEN BEGIN
+    EditedItem.Row := Index;
+  END
+  ELSE BEGIN
+    EditedItem.Column := Index;
+  END;
+
+  Modified;
+END;
+
+{ TGlicRowDefPropEditor }
+
+FUNCTION TGlicRowDefPropEditor.IsRow: BOOLEAN;
+BEGIN
+  Result := TRUE;
+END;
+
+{ TGlicColDefPropEditor }
+
+FUNCTION TGlicColDefPropEditor.IsRow: BOOLEAN;
+BEGIN
+  Result := FALSE;
 END;
 
 END.

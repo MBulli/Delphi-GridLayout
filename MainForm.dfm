@@ -2,7 +2,7 @@ object Form1: TForm1
   Left = 0
   Top = 0
   Caption = 'Form1'
-  ClientHeight = 461
+  ClientHeight = 763
   ClientWidth = 832
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -16,7 +16,7 @@ object Form1: TForm1
     Left = 0
     Top = 0
     Width = 353
-    Height = 461
+    Height = 763
     Align = alLeft
     Color = clWindow
     ParentBackground = False
@@ -71,18 +71,20 @@ object Form1: TForm1
       item
         Control = Button2
         Column = 2
+        Row = 3
       end
       item
         Control = Button3
         Column = 1
         Row = 1
       end>
+    ExplicitHeight = 461
     object Button2: TButton
       Left = 150
-      Top = 0
+      Top = 160
       Width = 50
-      Height = 100
-      Caption = 'Button1'
+      Height = 50
+      Caption = 'Button2'
       TabOrder = 0
     end
     object Button3: TButton
@@ -170,7 +172,7 @@ object Form1: TForm1
     Left = 384
     Top = 55
     Width = 340
-    Height = 346
+    Height = 282
     Color = clWhite
     ParentBackground = False
     ColumnDefinitions = <
@@ -320,8 +322,81 @@ object Form1: TForm1
       TabOrder = 8
     end
   end
+  object GridLayout3: TGridLayout
+    Left = 416
+    Top = 376
+    Width = 185
+    Height = 345
+    Color = clWhite
+    ParentBackground = False
+    ColumnDefinitions = <
+      item
+        Mode = gsmStar
+        Width = 1.000000000000000000
+        Visibility = glvVisible
+      end>
+    RowDefinitions = <
+      item
+        Mode = gsmPixels
+        Height = 50.000000000000000000
+        Visibility = glvVisible
+      end
+      item
+        Mode = gsmPixels
+        Height = 100.000000000000000000
+        Visibility = glvVisible
+      end
+      item
+        Mode = gsmPixels
+        Height = 30.000000000000000000
+        Visibility = glvVisible
+      end
+      item
+        Mode = gsmAutosize
+        Visibility = glvVisible
+      end>
+    Items = <
+      item
+        Control = Label1
+        Column = 0
+        Row = 0
+      end
+      item
+        Control = Button14
+        Column = 0
+        Row = 3
+      end
+      item
+        Control = CheckBox1
+        Column = 0
+        Row = 1
+      end>
+    object Label1: TLabel
+      Left = 0
+      Top = 0
+      Width = 183
+      Height = 50
+      Caption = 'Label1'
+    end
+    object Button14: TButton
+      Left = 0
+      Top = 180
+      Width = 183
+      Height = 25
+      Caption = 'Button14'
+      TabOrder = 0
+    end
+    object CheckBox1: TCheckBox
+      Left = 0
+      Top = 50
+      Width = 183
+      Height = 100
+      Caption = 'CheckBox1'
+      TabOrder = 1
+    end
+  end
   object Timer1: TTimer
-    Left = 496
-    Top = 472
+    Left = 784
+    Top = 576
   end
 end

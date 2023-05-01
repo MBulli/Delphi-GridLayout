@@ -28,6 +28,10 @@ type
     Button11: TButton;
     Button12: TButton;
     Button13: TButton;
+    GridLayout3: TGridLayout;
+    Label1: TLabel;
+    Button14: TButton;
+    CheckBox1: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure Button1Click(Sender: TObject);
   private

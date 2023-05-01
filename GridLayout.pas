@@ -105,6 +105,15 @@ TYPE
   STRICT PRIVATE
     FControl : TControl;
 
+    // To make the designer experience more stable,
+    // we don't use the row/col index to reference the actual row/col definition.
+    // Instead, we hold a pointer directly to the object.
+    // This solves the issue of changing row/col definitions in the designer,
+    // if you add something new and move it up in the structure view.
+    // For this the row/col definition can still be assigned by index
+    // but in the background everything (up to the actual layouting) uses the pointer.
+    // But the pointer can't be stored in the dfm, so the indices
+    // are stored in the dfm and mapped in the ReadState() method of the GridLayout.
     FRowRef  : TGridLayoutRowDefinition;
     FColRef  : TGridLayoutColumnDefinition;
 

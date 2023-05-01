@@ -239,6 +239,9 @@ TYPE
     CONSTRUCTOR Create(AOwner: TComponent); OVERRIDE;
     DESTRUCTOR  Destroy();                  OVERRIDE;
 
+    PROCEDURE BeginUpdate;
+    PROCEDURE EndUpdate;
+
     PROCEDURE AddColumn(AMode : TGridLayoutSizeMode; AFactor : Single);
     PROCEDURE AddRow   (AMode : TGridLayoutSizeMode; AFactor : Single);
 
@@ -719,6 +722,22 @@ END;
 FUNCTION TGridLayout.GetRowCount: Integer;
 BEGIN
   Result := FRowDef.Count;
+END;
+
+
+PROCEDURE TGridLayout.BeginUpdate;
+BEGIN
+  FItems.BeginUpdate;
+  FColumnDef.BeginUpdate;
+  FRowDef.BeginUpdate;
+END;
+
+
+PROCEDURE TGridLayout.EndUpdate;
+BEGIN
+  FItems.EndUpdate;
+  FColumnDef.EndUpdate;
+  FRowDef.EndUpdate;
 END;
 
 

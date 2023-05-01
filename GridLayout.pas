@@ -104,17 +104,27 @@ TYPE
 
   STRICT PRIVATE
     FControl : TControl;
-    FColumn  : Integer;
-    FRow     : Integer;
+
+    FRowRef  : TGridLayoutRowDefinition;
+    FColRef  : TGridLayoutColumnDefinition;
 
     FColumnSpan : Integer;
     FRowSpan    : Integer;
 
     PROCEDURE SetControl   (NewValue : TControl);
-    PROCEDURE SetColumn    (NewValue : Integer);
-    PROCEDURE SetRow       (NewValue : Integer);
     PROCEDURE SetColumnSpan(NewValue : Integer);
     PROCEDURE SetRowSpan   (NewValue : Integer);
+
+    PROCEDURE SetRowRef    (NewValue : TGridLayoutRowDefinition);
+    PROCEDURE SetColRef    (NewValue : TGridLayoutColumnDefinition);
+
+    PROCEDURE SetColIndex  (NewValue : Integer);
+    PROCEDURE SetRowIndex  (NewValue : Integer);
+    FUNCTION  GetColIndex : INTEGER;
+    FUNCTION  GetRowIndex : INTEGER;
+  PRIVATE
+
+    PROCEDURE SetRefs(RowRef : TGridLayoutRowDefinition; ColRef : TGridLayoutColumnDefinition);
 
   PROTECTED
     FUNCTION GetDisplayName : STRING; OVERRIDE;
@@ -126,10 +136,13 @@ TYPE
 
   PUBLISHED
     PROPERTY Control    : TControl READ FControl    WRITE SetControl     DEFAULT NIL;
-    PROPERTY Column     : Integer  READ FColumn     WRITE SetColumn      DEFAULT 0;
-    PROPERTY Row        : Integer  READ FRow        WRITE SetRow         DEFAULT 0;
+    PROPERTY Column     : Integer  READ GetColIndex WRITE SetColIndex    DEFAULT -1;
+    PROPERTY Row        : Integer  READ GetRowIndex WRITE SetRowIndex    DEFAULT -1;
     PROPERTY ColumnSpan : Integer  READ FColumnSpan WRITE SetColumnSpan  DEFAULT 1;
     PROPERTY RowSpan    : Integer  READ FRowSpan    WRITE SetRowSpan     DEFAULT 1;
+
+    PROPERTY RowRef     : TGridLayoutRowDefinition    READ FRowRef WRITE SetRowRef STORED FALSE DEFAULT NIL;
+    PROPERTY ColumnRef  : TGridLayoutColumnDefinition READ FColRef WRITE SetColRef STORED FALSE DEFAULT NIL;
   END;
 
   TGridLayoutItemCollection = CLASS(TOwnedCollection)
@@ -220,6 +233,8 @@ TYPE
                               VAR Rect     : TRect);                            OVERRIDE;
     PROCEDURE Paint;                                                            OVERRIDE;
 
+    PROCEDURE ReadState(Reader: TReader); OVERRIDE;
+
   PUBLIC
     CONSTRUCTOR Create(AOwner: TComponent); OVERRIDE;
     DESTRUCTOR  Destroy();                  OVERRIDE;
@@ -229,7 +244,12 @@ TYPE
 
     PROCEDURE AddItem(Control : TControl;
                       Row     : Integer;
-                      Column  : Integer);
+                      Column  : Integer); OVERLOAD;
+
+    PROCEDURE AddItem(Control : TControl;
+                      RowDef  : TGridLayoutRowDefinition;
+                      ColDef  : TGridLayoutColumnDefinition); OVERLOAD;
+
 
     PROCEDURE RemoveItemForControl(Control : TControl);
 
@@ -254,6 +274,9 @@ TYPE
     // TODO: Functions are not recursive; Meaning needs AControl.Parent=self to return something.
     FUNCTION ColumnIndexFromControl(CONST AControl : TControl) : INTEGER;
     FUNCTION RowIndexFromControl   (CONST AControl : TControl) : INTEGER;
+
+    FUNCTION ColumnOrNil(CONST ColumnIndex : INTEGER) : TGridLayoutColumnDefinition;
+    FUNCTION RowOrNil   (CONST RowIndex    : INTEGER) : TGridLayoutRowDefinition;
 
     PROPERTY  ColumnCount : Integer READ GetColumnCount;
     PROPERTY  RowCount    : Integer READ GetRowCount;
@@ -379,8 +402,8 @@ BEGIN
   INHERITED Create(Collection);
 
   FControl    := nil;
-  FRow        := 0;
-  FColumn     := 0;
+  FRowRef     := nil;
+  FColRef     := nil;
   FRowSpan    := 1;
   FColumnSpan := 1;
 END;
@@ -427,7 +450,7 @@ BEGIN
     ELSE CtrlName := FControl.ClassName;
   END;
 
-  Result := Format('%s[%d, %d] (%s)', [ClassName, FRow, FColumn, CtrlName]);
+  Result := Format('%s[%d, %d] (%s)', [ClassName, Row, Column, CtrlName]);
 
 {$IFDEF EnableExperimentalDesignerHook}
   IF Assigned(FOrigCtrlWndProc) THEN BEGIN
@@ -443,12 +466,37 @@ BEGIN
 END;
 
 
-PROCEDURE TGridLayoutItem.SetColumn(NewValue: Integer);
+PROCEDURE TGridLayoutItem.SetColIndex(NewValue : Integer);
 BEGIN
-  IF NewValue <> FColumn THEN BEGIN
-    FColumn := NewValue;
-    Changed(false);
+  IF NewValue <> GetColIndex THEN BEGIN
+    VAR ColDef := OwningLayout.ColumnOrNil(NewValue);
+    SetColRef(ColDef);
   END;
+END;
+
+
+PROCEDURE TGridLayoutItem.SetRowIndex(NewValue : Integer);
+BEGIN
+  IF NewValue <> GetRowIndex THEN BEGIN
+    VAR RowDef := OwningLayout.RowOrNil(NewValue);
+    SetRowRef(RowDef);
+  END;
+END;
+
+
+FUNCTION TGridLayoutItem.GetColIndex: INTEGER;
+BEGIN
+  IF FColRef <> NIL
+  THEN EXIT(FColRef.Index)
+  ELSE EXIT(-1);
+END;
+
+
+FUNCTION TGridLayoutItem.GetRowIndex: INTEGER;
+BEGIN
+  IF FRowRef <> NIL
+  THEN EXIT(FRowRef.Index)
+  ELSE EXIT(-1);
 END;
 
 
@@ -461,10 +509,34 @@ BEGIN
 END;
 
 
-PROCEDURE TGridLayoutItem.SetRow(NewValue: Integer);
+PROCEDURE TGridLayoutItem.SetRefs(RowRef: TGridLayoutRowDefinition; ColRef: TGridLayoutColumnDefinition);
 BEGIN
-  IF NewValue <> FRow THEN BEGIN
-    FRow := NewValue;
+  SetRowRef(RowRef);
+  SetColRef(ColRef);
+END;
+
+
+PROCEDURE TGridLayoutItem.SetRowRef(NewValue: TGridLayoutRowDefinition);
+BEGIN
+  IF NewValue <> NIL THEN BEGIN
+    Assert(NewValue.Collection = OwningLayout.RowDefinitions);
+  END;
+
+  IF NewValue <> FRowRef THEN BEGIN
+    FRowRef := NewValue;
+    Changed(false);
+  END;
+END;
+
+
+PROCEDURE TGridLayoutItem.SetColRef(NewValue: TGridLayoutColumnDefinition);
+BEGIN
+  IF NewValue <> NIL THEN BEGIN
+    Assert(NewValue.Collection = OwningLayout.ColumnDefinitions);
+  END;
+
+  IF NewValue <> FColRef THEN BEGIN
+    FColRef := NewValue;
     Changed(false);
   END;
 END;
@@ -601,6 +673,35 @@ BEGIN
 END;
 
 
+PROCEDURE TGridLayout.ReadState(Reader: TReader);
+BEGIN
+  INHERITED;
+
+  VAR RowMax := FRowDef.Count-1;
+  VAR ColMax := FColumnDef.Count-1;
+
+  FOR VAR I := 0 TO FItems.Count-1 DO BEGIN
+    VAR Item := FItems.Items[I] AS TGridLayoutItem;
+
+    IF Item = NIL THEN CONTINUE;
+
+    VAR Row := NIL;
+    VAR Col := NIL;
+
+    IF InRange(Item.Row, 0, RowMax) THEN BEGIN
+      Row := FRowDef.Items[Item.Row];
+    END;
+
+    IF InRange(Item.Column, 0, ColMax) THEN BEGIN
+      Col := FColumnDef.Items[Item.Column];
+    END;
+
+    Item.SetRefs(Row, Col);
+  END;
+
+END;
+
+
 FUNCTION TGridLayout.GetColumnCount: Integer;
 BEGIN
   Result := FColumnDef.Count;
@@ -615,12 +716,22 @@ END;
 
 PROCEDURE TGridLayout.AddItem(Control : TControl; Row : Integer; Column : Integer);
 BEGIN
+  VAR RowDef := RowOrNil(Row);
+  VAR ColDef := ColumnOrNil(Column);
+
+  AddItem(Control, RowDef, ColDef);
+END;
+
+
+PROCEDURE TGridLayout.AddItem(Control: TControl; RowDef: TGridLayoutRowDefinition; ColDef: TGridLayoutColumnDefinition);
+BEGIN
   Assert(Assigned(Control));
+  IF RowDef <> NIL THEN Assert(RowDef.Collection = Self.RowDefinitions);
+  IF ColDef <> NIL THEN Assert(ColDef.Collection = Self.ColumnDefinitions);
 
   VAR Item := FItems.Add AS TGridLayoutItem;
 
-  Item.Column  := Column;
-  Item.Row     := Row;
+  Item.SetRefs(RowDef, ColDef);
   Item.Control := Control;
 END;
 
@@ -850,12 +961,14 @@ BEGIN
         OR (Item.Control = NIL)
         OR (NOT InRange(Item.Row, 0, FRowDef.Count-1))
         OR (NOT InRange(Item.Column, 0, FColumnDef.Count-1))
+        OR (Item.ColumnRef = NIL)
+        OR (Item.RowRef = NIL)
       THEN BEGIN
         Continue;
       END;
 
-      VAR ColVis := (FColumnDef.Items[Item.Column] AS TGridLayoutColumnDefinition).Visibility;
-      VAR RowVis := (FRowDef.Items[Item.Row] AS TGridLayoutRowDefinition).Visibility;
+      VAR ColVis := Item.ColumnRef.Visibility;
+      VAR RowVis := Item.RowRef.Visibility;
 
       Item.Control.Visible := (ColVis = glvVisible) AND (RowVis = glvVisible);
 
@@ -946,6 +1059,26 @@ BEGIN
   END;
 
   Result := -1;
+END;
+
+
+FUNCTION TGridLayout.ColumnOrNil(CONST ColumnIndex : INTEGER) : TGridLayoutColumnDefinition;
+BEGIN
+  Result := NIL;
+
+  IF InRange(ColumnIndex, 0, FColumnDef.Count-1) THEN BEGIN
+    Result := FColumnDef.Items[ColumnIndex] AS TGridLayoutColumnDefinition;
+  END;
+END;
+
+
+FUNCTION TGridLayout.RowOrNil(CONST RowIndex : INTEGER) : TGridLayoutRowDefinition;
+BEGIN
+  Result := NIL;
+
+  IF InRange(RowIndex, 0, FRowDef.Count-1) THEN BEGIN
+    Result := FRowDef.Items[RowIndex] AS TGridLayoutRowDefinition;
+  END;
 END;
 
 
@@ -1178,8 +1311,8 @@ FUNCTION TGridLayoutAlgorithm.ControlRect(BoundsRect : TRect; Row, Column, RowSp
 
 BEGIN
   // Clamp invalid indices to valid ones
-  Column := EnsureRange(Column, 0, Length(FColumns)-1);
-  Row    := EnsureRange(Row, 0, Length(FRows)-1);
+  Column     := EnsureRange(Column, 0, Length(FColumns)-1);
+  Row        := EnsureRange(Row, 0, Length(FRows)-1);
   ColumnSpan := EnsureRange(ColumnSpan, 1, Length(FColumns) - Column);
   RowSpan    := EnsureRange(RowSpan   , 1, Length(FRows   ) - Row);
 

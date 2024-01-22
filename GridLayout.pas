@@ -120,6 +120,8 @@ TYPE
     FColumnSpan : Integer;
     FRowSpan    : Integer;
 
+    FVisible : Boolean;
+
     PROCEDURE SetControl   (NewValue : TControl);
     PROCEDURE SetColumnSpan(NewValue : Integer);
     PROCEDURE SetRowSpan   (NewValue : Integer);
@@ -131,6 +133,8 @@ TYPE
     PROCEDURE SetRowIndex  (NewValue : Integer);
     FUNCTION  GetColIndex : INTEGER;
     FUNCTION  GetRowIndex : INTEGER;
+
+    PROCEDURE SetVisible(AValue : Boolean);
   PRIVATE
 
     PROCEDURE SetRefs(RowRef : TGridLayoutRowDefinition; ColRef : TGridLayoutColumnDefinition);
@@ -149,6 +153,7 @@ TYPE
     PROPERTY Row        : Integer  READ GetRowIndex WRITE SetRowIndex    DEFAULT -1;
     PROPERTY ColumnSpan : Integer  READ FColumnSpan WRITE SetColumnSpan  DEFAULT 1;
     PROPERTY RowSpan    : Integer  READ FRowSpan    WRITE SetRowSpan     DEFAULT 1;
+    PROPERTY Visible    : Boolean  READ FVisible    WRITE SetVisible     DEFAULT TRUE;
 
     PROPERTY RowRef     : TGridLayoutRowDefinition    READ FRowRef WRITE SetRowRef STORED FALSE DEFAULT NIL;
     PROPERTY ColumnRef  : TGridLayoutColumnDefinition READ FColRef WRITE SetColRef STORED FALSE DEFAULT NIL;
@@ -428,6 +433,7 @@ BEGIN
   FColRef     := nil;
   FRowSpan    := 1;
   FColumnSpan := 1;
+  FVisible    := TRUE;
 END;
 
 
@@ -568,6 +574,14 @@ PROCEDURE TGridLayoutItem.SetRowSpan(NewValue: Integer);
 BEGIN
   IF NewValue <> FRowSpan THEN BEGIN
     FRowSpan := NewValue;
+    Changed(false);
+  END;
+END;
+
+PROCEDURE TGridLayoutItem.SetVisible(AValue: Boolean);
+BEGIN
+  IF AValue <> FVisible THEN BEGIN
+    FVisible := AValue;
     Changed(false);
   END;
 END;
@@ -1025,7 +1039,7 @@ BEGIN
       VAR ColVis := Item.ColumnRef.Visibility;
       VAR RowVis := Item.RowRef.Visibility;
 
-      Item.Control.Visible := (ColVis = glvVisible) AND (RowVis = glvVisible);
+      Item.Control.Visible := (ColVis = glvVisible) AND (RowVis = glvVisible) AND Item.Visible;
 
       // Set Control Bounds
       IF Item.Control.Visible THEN BEGIN

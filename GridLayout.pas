@@ -254,13 +254,13 @@ TYPE
     PROCEDURE AddColumn(AMode : TGridLayoutSizeMode; AFactor : Single);
     PROCEDURE AddRow   (AMode : TGridLayoutSizeMode; AFactor : Single);
 
-    PROCEDURE AddItem(Control : TControl;
-                      Row     : Integer;
-                      Column  : Integer); OVERLOAD;
+    FUNCTION AddItem(Control : TControl;
+                     Row     : Integer;
+                     Column  : Integer) : TGridLayoutItem; OVERLOAD;
 
-    PROCEDURE AddItem(Control : TControl;
-                      RowDef  : TGridLayoutRowDefinition;
-                      ColDef  : TGridLayoutColumnDefinition); OVERLOAD;
+    FUNCTION AddItem(Control : TControl;
+                     RowDef  : TGridLayoutRowDefinition;
+                     ColDef  : TGridLayoutColumnDefinition) : TGridLayoutItem; OVERLOAD;
 
 
     PROCEDURE RemoveItemForControl(Control : TControl);
@@ -279,6 +279,8 @@ TYPE
 
     FUNCTION SetColumnVisbilityForControl(AControl : TControl; Visibility : TGridVisibility) : INTEGER;
     FUNCTION SetRowVisbilityForControl   (AControl : TControl; Visibility : TGridVisibility) : INTEGER;
+
+    FUNCTION GetItemFromControl(AControl : TControl) : TGridLayoutItem;
 
     FUNCTION ColumnIndexFromPos(CONST Position : TPoint) : INTEGER;
     FUNCTION RowIndexFromPos   (CONST Position : TPoint) : INTEGER;
@@ -750,25 +752,25 @@ BEGIN
 END;
 
 
-PROCEDURE TGridLayout.AddItem(Control : TControl; Row : Integer; Column : Integer);
+FUNCTION TGridLayout.AddItem(Control : TControl; Row : Integer; Column : Integer) : TGridLayoutItem;
 BEGIN
   VAR RowDef := RowOrNil(Row);
   VAR ColDef := ColumnOrNil(Column);
 
-  AddItem(Control, RowDef, ColDef);
+  Result := AddItem(Control, RowDef, ColDef);
 END;
 
 
-PROCEDURE TGridLayout.AddItem(Control: TControl; RowDef: TGridLayoutRowDefinition; ColDef: TGridLayoutColumnDefinition);
+FUNCTION TGridLayout.AddItem(Control: TControl; RowDef: TGridLayoutRowDefinition; ColDef: TGridLayoutColumnDefinition) : TGridLayoutItem;
 BEGIN
   Assert(Assigned(Control));
   IF RowDef <> NIL THEN Assert(RowDef.Collection = Self.RowDefinitions);
   IF ColDef <> NIL THEN Assert(ColDef.Collection = Self.ColumnDefinitions);
 
-  VAR Item := FItems.Add AS TGridLayoutItem;
+  Result := FItems.Add AS TGridLayoutItem;
 
-  Item.SetRefs(RowDef, ColDef);
-  Item.Control := Control;
+  Result.SetRefs(RowDef, ColDef);
+  Result.Control := Control;
 END;
 
 
@@ -923,6 +925,23 @@ BEGIN
 END;
 
 
+FUNCTION TGridLayout.GetItemFromControl(AControl: TControl): TGridLayoutItem;
+BEGIN
+  IF AControl = NIL THEN EXIT(nil);
+  IF AControl.Parent <> self THEN EXIT(nil);
+
+  FOR VAR I := 0 TO FItems.Count-1 DO BEGIN
+    VAR Item := TGridLayoutItem(FItems.Items[I]);
+
+    IF Item.Control = AControl THEN BEGIN
+      EXIT(Item);
+    END;
+  END;
+
+  Exit(nil);
+END;
+
+
 PROCEDURE TGridLayout.SetItemCollection(CONST AValue: TGridLayoutItemCollection);
 BEGIN
   FItems.Assign(AValue);
@@ -1066,35 +1085,21 @@ END;
 
 FUNCTION TGridLayout.ColumnIndexFromControl(CONST AControl : TControl) : INTEGER;
 BEGIN
-  IF AControl = NIL THEN EXIT(-1);
-  IF AControl.Parent <> self THEN EXIT(-1);
+  VAR Item := GetItemFromControl(AControl);
 
-  FOR VAR I := 0 TO FItems.Count-1 DO BEGIN
-    VAR Item := TGridLayoutItem(FItems.Items[I]);
+  IF Item = NIL THEN EXIT(-1);
 
-    IF Item.Control = AControl THEN BEGIN
-      EXIT(Item.Column);
-    END;
-  END;
-
-  Result := -1;
+  Exit(Item.Column);
 END;
 
 
 FUNCTION TGridLayout.RowIndexFromControl(CONST AControl : TControl) : INTEGER;
 BEGIN
-  IF AControl = NIL THEN EXIT(-1);
-  IF AControl.Parent <> self THEN EXIT(-1);
+  VAR Item := GetItemFromControl(AControl);
 
-  FOR VAR I := 0 TO FItems.Count-1 DO BEGIN
-    VAR Item := TGridLayoutItem(FItems.Items[I]);
+  IF Item = NIL THEN EXIT(-1);
 
-    IF Item.Control = AControl THEN BEGIN
-      EXIT(Item.Row);
-    END;
-  END;
-
-  Result := -1;
+  Exit(Item.Row);
 END;
 
 

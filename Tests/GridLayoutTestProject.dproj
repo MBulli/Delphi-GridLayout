@@ -88,6 +88,7 @@
         <DCCReference Include="GridLayoutAlgorithmTests.pas"/>
         <DCCReference Include="..\GridLayout.pas"/>
         <DCCReference Include="SvgExport.pas"/>
+        <DCCReference Include="GridLayoutTests.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

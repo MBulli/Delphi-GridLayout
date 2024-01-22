@@ -29,7 +29,6 @@ USES
  - TComponent Editor
  - TextOut Values in Paint for Columns
  - MinWidth/MinHeigth
- - AutoSize on container level
  - Add "Row/Column" fake properties to controls https://edn.embarcadero.com/article/33448
  - Padding property for TGridLayoutItem
  - Small parser for quick row/column setup in code like GL.SetColumns('10px 2* auto');
@@ -41,6 +40,8 @@ TYPE
   TGridLayoutSizeMode = (gsmPixels, gsmStar, gsmAutosize);
 
   TGridVisibility = (glvVisible, glvCollapsed, glvHidden);
+
+  TGridAutoSizeMode = (glaBoth, glaVertical, glaHorizontal);
 
   TGridLayout = CLASS;
 
@@ -78,6 +79,9 @@ TYPE
 
 
   TGridLayoutColumnCollection = CLASS(TOwnedCollection)
+  PRIVATE
+    FUNCTION HasAnyStarRow : BOOLEAN;
+
   PROTECTED
     PROCEDURE Update(Item: TCollectionItem); OVERRIDE;
 
@@ -86,6 +90,9 @@ TYPE
   END;
 
   TGridlayoutRowCollection = CLASS(TOwnedCollection)
+  PRIVATE
+    FUNCTION HasAnyStarRow : BOOLEAN;
+
   PROTECTED
     PROCEDURE Update(Item: TCollectionItem); OVERRIDE;
 
@@ -225,6 +232,8 @@ TYPE
     FColumnGap : INTEGER;
     FRowGap    : INTEGER;
 
+    FAutoSizeMode : TGridAutoSizeMode;
+
     FUNCTION GetColumnCount () : Integer;
     FUNCTION GetRowCount    () : Integer;
 
@@ -248,6 +257,10 @@ TYPE
     PROCEDURE Paint;                                                            OVERRIDE;
 
     PROCEDURE ReadState(Reader: TReader); OVERRIDE;
+
+    FUNCTION CanAutoSize(VAR NewWidth: Integer; VAR NewHeight: Integer): Boolean; OVERRIDE;
+
+
 
   PUBLIC
     CONSTRUCTOR Create(AOwner: TComponent); OVERRIDE;
@@ -304,6 +317,7 @@ TYPE
 
   PUBLISHED
     PROPERTY Align;
+    PROPERTY AutoSize;
     PROPERTY Color;
     PROPERTY ParentBackground;
     PROPERTY ParentColor;
@@ -314,6 +328,8 @@ TYPE
 
     PROPERTY ColumnGap : INTEGER READ FColumnGap WRITE SetColumnGap DEFAULT 0;
     PROPERTY RowGap    : INTEGER READ FRowGap    WRITE SetRowGap    DEFAULT 0;
+
+    PROPERTY AutoSizeMode : TGridAutoSizeMode READ FAutoSizeMode WRITE FAutoSizeMode DEFAULT glaBoth;
   END;
 
 IMPLEMENTATION
@@ -389,6 +405,18 @@ BEGIN
 END;
 
 
+FUNCTION TGridLayoutColumnCollection.HasAnyStarRow: BOOLEAN;
+BEGIN
+  FOR VAR I := 0 TO Count-1 DO BEGIN
+    IF TGridLayoutColumnDefinition(Items[I]).Mode = gsmStar THEN BEGIN
+      EXIT(TRUE);
+    END;
+  END;
+
+  EXIT(FALSE);
+END;
+
+
 PROCEDURE TGridLayoutColumnCollection.Update(Item: TCollectionItem);
 BEGIN
   INHERITED;
@@ -407,6 +435,19 @@ CONSTRUCTOR TGridlayoutRowCollection.Create(AOwner: TPersistent);
 BEGIN
   INHERITED Create(AOwner, TGridLayoutRowDefinition);
 END;
+
+
+FUNCTION TGridlayoutRowCollection.HasAnyStarRow: BOOLEAN;
+BEGIN
+  FOR VAR I := 0 TO Count-1 DO BEGIN
+    IF TGridLayoutRowDefinition(Items[I]).Mode = gsmStar THEN BEGIN
+      EXIT(TRUE);
+    END;
+  END;
+
+  EXIT(FALSE);
+END;
+
 
 PROCEDURE TGridlayoutRowCollection.Update(Item: TCollectionItem);
 BEGIN
@@ -867,6 +908,7 @@ BEGIN
 
   IF FColumnGap <> NewValue THEN BEGIN
     FColumnGap := NewValue;
+    AdjustSize;
     Realign;
     Invalidate;
   END;
@@ -885,6 +927,7 @@ BEGIN
 
   IF FRowGap <> NewValue THEN BEGIN
     FRowGap := NewValue;
+    AdjustSize;
     Realign;
     Invalidate;
   END;
@@ -959,6 +1002,44 @@ END;
 PROCEDURE TGridLayout.SetItemCollection(CONST AValue: TGridLayoutItemCollection);
 BEGIN
   FItems.Assign(AValue);
+END;
+
+
+FUNCTION TGridLayout.CanAutoSize(VAR NewWidth, NewHeight: Integer): Boolean;
+BEGIN
+  VAR VerticalChanged := FALSE;
+  VAR HorizontalChanged := FALSE;
+
+  VAR DoVertical   := (FRowDef.Count > 0) AND ((FAutoSizeMode = glaBoth) OR (FAutoSizeMode = glaVertical));
+  VAR DoHorizontal := (FColumnDef.Count > 0) AND ((FAutoSizeMode = glaBoth) OR (FAutoSizeMode = glaHorizontal));
+
+  FAlgorithm.Calculate(TRect.Create(0, 0, NewWidth, NewHeight));
+
+  IF DoVertical THEN BEGIN
+    IF NOT FRowDef.HasAnyStarRow THEN BEGIN
+      VAR LastRow := FAlgorithm.Rows[FAlgorithm.RowCount-1];
+      VAR TotalHeight := TRUNC(LastRow.MinY + LastRow.Height);
+
+      IF NewHeight <> TotalHeight THEN BEGIN
+        NewHeight := TotalHeight;
+        VerticalChanged := TRUE;
+      END;
+    END;
+  END;
+
+  IF DoHorizontal THEN BEGIN
+    IF NOT FColumnDef.HasAnyStarRow THEN BEGIN
+      VAR LastColumn := FAlgorithm.Columns[FAlgorithm.ColumnCount-1];
+      VAR TotalWidth := TRUNC(LastColumn.MinX + LastColumn.Width);
+
+      IF NewWidth <> TotalWidth THEN BEGIN
+        NewWidth := TotalWidth;
+        HorizontalChanged := TRUE;
+      END;
+    END;
+  END;
+
+  Result := VerticalChanged OR HorizontalChanged;
 END;
 
 

@@ -15,7 +15,8 @@ uses
   DUnitX.TestFramework,
   GridLayoutAlgorithmTests in 'GridLayoutAlgorithmTests.pas',
   GridLayout in '..\GridLayout.pas',
-  SvgExport in 'SvgExport.pas';
+  SvgExport in 'SvgExport.pas',
+  GridLayoutTests in 'GridLayoutTests.pas';
 
 {$IFNDEF TESTINSIGHT}
 var

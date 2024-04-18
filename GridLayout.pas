@@ -1506,7 +1506,7 @@ BEGIN
 
     FOR VAR Item IN FParentLayout.FItems DO BEGIN
       WITH Item AS TGridLayoutItem DO BEGIN
-        IF (Column = ColumnIndex) THEN BEGIN
+        IF (Column = ColumnIndex) AND (Control <> NIL) THEN BEGIN
           MaxWidth := Max(Control.Width, MaxWidth);
         END;
       END;
@@ -1534,7 +1534,7 @@ BEGIN
 
     FOR VAR Item IN FParentLayout.FItems DO BEGIN
       WITH Item AS TGridLayoutItem DO BEGIN
-        IF (Row = RowIndex) THEN BEGIN
+        IF (Row = RowIndex) AND (Control <> NIL) THEN BEGIN
           MaxHeight := Max(Control.Height, MaxHeight);
         END;
       END;

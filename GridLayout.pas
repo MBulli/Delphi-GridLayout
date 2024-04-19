@@ -963,7 +963,7 @@ BEGIN
   VAR ColIndex := ColumnIndexFromControl(AControl);
 
   IF InRange(ColIndex, 0, FColumnDef.Count) THEN BEGIN
-    SetRowVisbility(ColIndex, Visibility);
+    SetColumnVisbility(ColIndex, Visibility);
   END;
 
   Result := ColIndex;

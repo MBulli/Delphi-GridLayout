@@ -1117,20 +1117,17 @@ BEGIN
         Continue;
       END;
 
-      VAR ColVis := Item.ColumnRef.Visibility;
-      VAR RowVis := Item.RowRef.Visibility;
-
-      Item.Control.Visible := (ColVis = glvVisible) AND (RowVis = glvVisible) AND Item.Visible;
-
       // Set Control Bounds
-      IF Item.Control.Visible THEN BEGIN
-        VAR CtrlBounds  := FAlgorithm.ControlRect(Item.Control.BoundsRect, Item.Row, Item.Column, Item.RowSpan, Item.ColumnSpan);
+      VAR CtrlBounds  := FAlgorithm.ControlRect(Item.Control.BoundsRect, Item.Row, Item.Column, Item.RowSpan, Item.ColumnSpan);
 
+      // If rows or columns are hidden or collapsed, the algorithm assigns the correct dimensions.
+      // So we don't have to check for visibility or anything, just infer it from the CtrlBounds.
+      IF CtrlBounds.IsEmpty THEN BEGIN
+        Item.Control.Visible := FALSE;
+      END
+      ELSE BEGIN
+        Item.Control.Visible := Item.Visible;
         Item.Control.Margins.SetControlBounds(CtrlBounds, TRUE);
-
-        IF csDesigning IN ComponentState THEN BEGIN
-          Item.Control.Invalidate;
-        END;
       END;
     END;
 

@@ -61,6 +61,9 @@ TYPE
 
     [Test]
     PROCEDURE TestHiddenRow;
+
+    [Test]
+    PROCEDURE TestCollapseColumnWithColumnSpan;
   END;
 
 IMPLEMENTATION
@@ -415,6 +418,38 @@ BEGIN
   AssertRectEqual(RectLTWH( 0,  0, 100, 60), GL.Algorithm.ControlRect(RandomRect,0,0, 4,1));
   AssertRectEqual(RectLTWH( 0, 20, 100, 40), GL.Algorithm.ControlRect(RandomRect,1,0, 4,1));
   AssertRectEqual(RectLTWH( 0, 40, 100, 20), GL.Algorithm.ControlRect(RandomRect,2,0, 4,1));
+END;
+
+
+PROCEDURE TGridLayoutAlgorithmTests.TestCollapseColumnWithColumnSpan;
+BEGIN
+  VAR LayoutBounds := Rect(0,0,100,100);
+  VAR RandomRect   := Rect(42,1337,512,1024);
+
+  VAR GL := TGridLayout.Create(NIL);
+
+  GL.AddColumn(gsmPixels, 30);
+  GL.AddColumn(gsmStar, 1);
+  GL.AddRow(gsmPixels, 60);
+  GL.AddRow(gsmStar, 1);
+
+  GL.ColumnVisbility[0] := glvCollapsed;
+
+  GL.Algorithm.Calculate(LayoutBounds);
+
+  VAR SVG := TSvgExport.Create('TestCollapseColumnWithColumnSpan.svg', GL, LayoutBounds);
+  SVG.AddRect(RandomRect, 0,0, 1,1);
+  SVG.AddRect(RandomRect, 1,0, 1,1);
+
+  SVG.AddRect(RandomRect, 0,1, 1,1);
+  SVG.AddRect(RandomRect, 1,0, 1,2);
+  FreeAndNil(SVG);
+
+  AssertRectEqual(RectLTWH( 0,   0, 0, 60), GL.Algorithm.ControlRect(RandomRect,0,0, 1,1));
+  AssertRectEqual(RectLTWH( 0,  60, 0, 40), GL.Algorithm.ControlRect(RandomRect,1,0, 1,1));
+
+  AssertRectEqual(RectLTWH( 0,  0, 100, 60), GL.Algorithm.ControlRect(RandomRect,0,1, 1,1));
+  AssertRectEqual(RectLTWH( 0, 60, 100, 40), GL.Algorithm.ControlRect(RandomRect,1,0, 1,2));
 END;
 
 
